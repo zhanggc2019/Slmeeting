@@ -16,7 +16,8 @@
     "postProcessing": "Post-Elaborazione",
     "history": "Cronologia",
     "debug": "Debug",
-    "about": "Informazioni"
+    "about": "Informazioni",
+    "meeting": "Meetings"
   },
   "onboarding": {
     "subtitle": "Per cominciare, scegli un modello di riconoscimento vocale",
@@ -636,6 +637,41 @@
         "label": "Mostra novità",
         "description": "Mostra le note di rilascio dopo gli aggiornamenti di Handy"
       }
+    },
+    "meeting": {
+      "title": "Meetings",
+      "description": "Import audio, review the transcript, and generate structured minutes.",
+      "importAudio": "Import audio",
+      "history": "Meeting history",
+      "refresh": "Refresh meetings",
+      "empty": "No meetings yet.",
+      "noSelection": "Select a meeting",
+      "noTranscript": "No transcript segments yet.",
+      "progress": "{{phase}} · {{percent}}%",
+      "importStarted": "Audio import started",
+      "importFailed": "Audio import failed",
+      "minutes": "Meeting minutes",
+      "apiKey": "DeepSeek API key",
+      "model": "LLM model",
+      "generateMinutes": "Generate minutes",
+      "minutesGenerated": "Meeting minutes generated",
+      "minutesFailed": "Failed to generate meeting minutes",
+      "apiKeyRequired": "Enter a DeepSeek API key first.",
+      "timestamp": "[{{seconds}}s]",
+      "baseUrl": "Base URL",
+      "providers": {
+        "deepseek": "DeepSeek",
+        "openai": "OpenAI",
+        "openrouter": "OpenRouter",
+        "ollama": "Ollama",
+        "custom": "Custom"
+      },
+      "startLive": "Start live meeting",
+      "stopLive": "Stop live meeting",
+      "liveListening": "Listening…",
+      "liveStarted": "Live meeting started",
+      "liveStopped": "Live meeting stopped",
+      "liveFailed": "Live meeting failed"
     }
   },
   "footer": {

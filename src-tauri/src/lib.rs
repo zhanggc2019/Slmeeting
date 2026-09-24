@@ -12,6 +12,7 @@ mod helpers;
 mod input;
 mod llm_client;
 mod managers;
+mod meeting;
 mod memory;
 mod overlay;
 mod paste_tx;
@@ -204,6 +205,9 @@ fn initialize_core_logic(app_handle: &AppHandle) {
     );
     let history_manager =
         Arc::new(HistoryManager::new(app_handle).expect("Failed to initialize history manager"));
+    let meeting_manager = Arc::new(
+        meeting::MeetingManager::new(app_handle).expect("Failed to initialize meeting manager"),
+    );
 
     // Initialize the transcribe-cpp native backend (logging + backend module
     // registration) once, before any whisper model is loaded.
@@ -217,6 +221,7 @@ fn initialize_core_logic(app_handle: &AppHandle) {
     app_handle.manage(model_manager.clone());
     app_handle.manage(transcription_manager.clone());
     app_handle.manage(history_manager.clone());
+    app_handle.manage(meeting_manager);
     app_handle.manage(tray::TrayState::new());
 
     // Note: Shortcuts are NOT initialized here.
@@ -763,12 +768,22 @@ pub fn run(cli_args: CliArgs) {
             commands::history::retry_history_entry_transcription,
             commands::history::update_history_limit,
             commands::history::update_recording_retention_period,
+            meeting::create_meeting,
+            meeting::list_meetings,
+            meeting::get_meeting_segments,
+            meeting::get_meeting_minutes,
+            meeting::list_meeting_templates,
+            meeting::start_live_meeting,
+            meeting::stop_live_meeting,
+            meeting::import_meeting_audio,
+            meeting::generate_meeting_minutes,
             helpers::clamshell::is_laptop,
         ])
         .events(collect_events![
             managers::history::HistoryUpdatePayload,
             managers::transcription::StreamTextEvent,
             managers::transcription::StreamPhaseEvent,
+            meeting::MeetingProgressEvent,
         ]);
 
     #[cfg(debug_assertions)] // <- Only export on non-release builds

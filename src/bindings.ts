@@ -907,6 +907,70 @@ async updateRecordingRetentionPeriod(period: string) : Promise<Result<null, stri
     else return { status: "error", error: e  as any };
 }
 },
+async listMeetings(limit: number | null) : Promise<Result<MeetingSession[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("list_meetings", { limit }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async listMeetingTemplates() : Promise<Result<MeetingTemplate[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("list_meeting_templates") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async startLiveMeeting(title: string | null, templateId: string | null) : Promise<Result<MeetingSession, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("start_live_meeting", { title, templateId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async stopLiveMeeting() : Promise<Result<MeetingSession, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("stop_live_meeting") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async getMeetingSegments(meetingId: string) : Promise<Result<TranscriptSegment[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_meeting_segments", { meetingId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async getMeetingMinutes(meetingId: string) : Promise<Result<MeetingMinutes | null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_meeting_minutes", { meetingId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async importMeetingAudio(path: string, title: string | null, templateId: string | null) : Promise<Result<MeetingSession, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("import_meeting_audio", { path, title, templateId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async generateMeetingMinutes(meetingId: string, templateId: string, providerId: string | null, baseUrl: string | null, apiKey: string, model: string | null) : Promise<Result<MeetingMinutes, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("generate_meeting_minutes", { meetingId, templateId, providerId, baseUrl, apiKey, model }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 /**
  * Checks if the Mac is a laptop by detecting battery presence
  * 
@@ -927,10 +991,12 @@ async isLaptop() : Promise<Result<boolean, string>> {
 
 
 export const events = __makeEvents__<{
+meetingProgressEvent: MeetingProgressEvent,
 historyUpdatePayload: HistoryUpdatePayload,
 streamPhaseEvent: StreamPhaseEvent,
 streamTextEvent: StreamTextEvent
 }>({
+meetingProgressEvent: "meeting-progress-event",
 historyUpdatePayload: "history-update-payload",
 streamPhaseEvent: "stream-phase-event",
 streamTextEvent: "stream-text-event"
@@ -1020,7 +1086,14 @@ export type EngineType =
 "TranscribeCpp" | "Parakeet" | "Moonshine" | "MoonshineStreaming" | "SenseVoice" | "GigaAM" | "Canary" | "Cohere"
 export type GpuDeviceOption = { id: string; name: string; total_vram_mb: number }
 export type HistoryEntry = { id: number; file_name: string; timestamp: number; saved: boolean; title: string; transcription_text: string; post_processed_text: string | null; post_process_prompt: string | null; post_process_requested: boolean }
+export type MeetingMinutes = { id: number; meeting_id: string; template_id: string; provider_id: string; model: string; content_json: string; content_markdown: string; created_at: number }
+export type MeetingProgressEvent = { meeting_id: string; phase: string; progress: number; message: string | null }
+export type MeetingSession = { id: string; title: string; source: MeetingSource; status: MeetingStatus; created_at: number; started_at: number | null; ended_at: number | null; duration_ms: number | null; template_id: string | null }
+export type MeetingSource = "microphone" | "audio_file"
+export type MeetingStatus = "draft" | "recording" | "processing" | "generating_minutes" | "completed" | "failed" | "cancelled"
+export type MeetingTemplate = { id: string; name: string; description: string; system_prompt: string; is_builtin: boolean }
 export type HistoryUpdatePayload = { action: "added"; entry: HistoryEntry } | { action: "updated"; entry: HistoryEntry } | { action: "deleted"; id: number } | { action: "toggled"; id: number }
+export type TranscriptSegment = { id: number; meeting_id: string; sequence: number; start_ms: number; end_ms: number; text: string; is_final: boolean; speaker_id: string | null }
 /**
  * Result of changing keyboard implementation
  */

@@ -16,7 +16,8 @@
     "postProcessing": "पोस्ट प्रोसेस",
     "history": "इतिहास",
     "debug": "डिबग",
-    "about": "के बारे में"
+    "about": "के बारे में",
+    "meeting": "Meetings"
   },
   "onboarding": {
     "subtitle": "शुरू करने के लिए, एक ट्रांसक्रिप्शन मॉडल चुनें",
@@ -636,6 +637,41 @@
           "details": "Handy का लोकल स्पीच-टू-टेक्स्ट transcribe.cpp और ggml पर आधारित है. Georgi Gerganov और योगदान देने वालों के शानदार काम के लिए धन्यवाद."
         }
       }
+    },
+    "meeting": {
+      "title": "Meetings",
+      "description": "Import audio, review the transcript, and generate structured minutes.",
+      "importAudio": "Import audio",
+      "history": "Meeting history",
+      "refresh": "Refresh meetings",
+      "empty": "No meetings yet.",
+      "noSelection": "Select a meeting",
+      "noTranscript": "No transcript segments yet.",
+      "progress": "{{phase}} · {{percent}}%",
+      "importStarted": "Audio import started",
+      "importFailed": "Audio import failed",
+      "minutes": "Meeting minutes",
+      "apiKey": "DeepSeek API key",
+      "model": "LLM model",
+      "generateMinutes": "Generate minutes",
+      "minutesGenerated": "Meeting minutes generated",
+      "minutesFailed": "Failed to generate meeting minutes",
+      "apiKeyRequired": "Enter a DeepSeek API key first.",
+      "timestamp": "[{{seconds}}s]",
+      "baseUrl": "Base URL",
+      "providers": {
+        "deepseek": "DeepSeek",
+        "openai": "OpenAI",
+        "openrouter": "OpenRouter",
+        "ollama": "Ollama",
+        "custom": "Custom"
+      },
+      "startLive": "Start live meeting",
+      "stopLive": "Stop live meeting",
+      "liveListening": "Listening…",
+      "liveStarted": "Live meeting started",
+      "liveStopped": "Live meeting stopped",
+      "liveFailed": "Live meeting failed"
     }
   },
   "footer": {

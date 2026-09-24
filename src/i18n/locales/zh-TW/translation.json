@@ -16,7 +16,8 @@
     "postProcessing": "後處理",
     "history": "歷史紀錄",
     "debug": "偵錯",
-    "about": "關於"
+    "about": "關於",
+    "meeting": "語音會議"
   },
   "onboarding": {
     "subtitle": "首先，請選擇一種模型",
@@ -636,6 +637,41 @@
         "label": "顯示新功能",
         "description": "Handy 更新後顯示版本資訊"
       }
+    },
+    "meeting": {
+      "title": "Meetings",
+      "description": "Import audio, review the transcript, and generate structured minutes.",
+      "importAudio": "Import audio",
+      "history": "Meeting history",
+      "refresh": "Refresh meetings",
+      "empty": "No meetings yet.",
+      "noSelection": "Select a meeting",
+      "noTranscript": "No transcript segments yet.",
+      "progress": "{{phase}} · {{percent}}%",
+      "importStarted": "Audio import started",
+      "importFailed": "Audio import failed",
+      "minutes": "Meeting minutes",
+      "apiKey": "DeepSeek API key",
+      "model": "LLM model",
+      "generateMinutes": "Generate minutes",
+      "minutesGenerated": "Meeting minutes generated",
+      "minutesFailed": "Failed to generate meeting minutes",
+      "apiKeyRequired": "Enter a DeepSeek API key first.",
+      "timestamp": "[{{seconds}}秒]",
+      "baseUrl": "Base URL",
+      "providers": {
+        "deepseek": "DeepSeek",
+        "openai": "OpenAI",
+        "openrouter": "OpenRouter",
+        "ollama": "Ollama",
+        "custom": "Custom"
+      },
+      "startLive": "Start live meeting",
+      "stopLive": "Stop live meeting",
+      "liveListening": "Listening…",
+      "liveStarted": "Live meeting started",
+      "liveStopped": "Live meeting stopped",
+      "liveFailed": "Live meeting failed"
     }
   },
   "footer": {
