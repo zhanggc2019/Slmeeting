@@ -27,7 +27,7 @@ pub fn decode_audio_file(path: &Path) -> Result<DecodedAudio> {
         hint.with_extension(extension);
     }
 
-    let probed = get_probe()
+    let mut probed = get_probe()
         .format(
             &hint,
             source,

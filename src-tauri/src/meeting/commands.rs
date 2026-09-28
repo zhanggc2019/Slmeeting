@@ -257,7 +257,7 @@ pub fn import_meeting_audio(
     let meeting_id = session.id.clone();
     let manager = Arc::clone(&manager);
     let manager_for_error = Arc::clone(&manager);
-    let transcription_manager = Arc::clone(app.state::<Arc<TranscriptionManager>>());
+    let transcription_manager = Arc::clone(&*app.state::<Arc<TranscriptionManager>>());
     let app_for_job = app.clone();
     tauri::async_runtime::spawn(async move {
         if let Err(error) = run_offline_job(
