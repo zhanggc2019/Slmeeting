@@ -486,11 +486,23 @@
       "empty": "No meetings yet.",
       "noSelection": "Select a meeting",
       "noTranscript": "No transcript segments yet.",
-      "timestamp": "[{{seconds}}s]",
+      "timestamp": "[{{time}}]",
       "progress": "{{phase}} · {{percent}}%",
+      "phases": {
+        "importing": "Importing",
+        "transcribing": "Transcribing",
+        "transcribed": "Transcribed",
+        "generating_minutes": "Generating minutes",
+        "failed": "Failed"
+      },
       "importStarted": "Audio import started",
       "importFailed": "Audio import failed",
       "minutes": "Meeting minutes",
+      "templates": {
+        "standard": "Standard meeting minutes",
+        "action_items": "Action-focused minutes",
+        "executive_brief": "Executive brief"
+      },
       "baseUrl": "Base URL",
       "providers": {
         "deepseek": "DeepSeek",
@@ -502,6 +514,9 @@
       "apiKey": "LLM API key",
       "model": "LLM model",
       "generateMinutes": "Generate minutes",
+      "generatingMinutes": "Generating minutes…",
+      "generatingHint": "Organizing the transcript. Please wait.",
+      "preferencesFailed": "Could not save meeting model settings",
       "minutesGenerated": "Meeting minutes generated",
       "minutesFailed": "Failed to generate meeting minutes",
       "apiKeyRequired": "Enter an LLM API key first."

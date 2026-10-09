@@ -486,11 +486,23 @@
       "empty": "还没有会议记录。",
       "noSelection": "请选择一个会议",
       "noTranscript": "还没有转写片段。",
-      "timestamp": "[{{seconds}}秒]",
+      "timestamp": "[{{time}}]",
       "progress": "{{phase}} · {{percent}}%",
+      "phases": {
+        "importing": "正在导入",
+        "transcribing": "正在转写",
+        "transcribed": "转写完成",
+        "generating_minutes": "正在生成纪要",
+        "failed": "处理失败"
+      },
       "importStarted": "已开始导入音频",
       "importFailed": "音频导入失败",
       "minutes": "会议纪要",
+      "templates": {
+        "standard": "标准会议纪要",
+        "action_items": "待办事项纪要",
+        "executive_brief": "管理层简报"
+      },
       "baseUrl": "接口地址",
       "providers": {
         "deepseek": "DeepSeek",
@@ -502,6 +514,9 @@
       "apiKey": "LLM API Key",
       "model": "LLM 模型",
       "generateMinutes": "生成会议纪要",
+      "generatingMinutes": "正在生成会议纪要…",
+      "generatingHint": "正在整理转写内容，请稍候。",
+      "preferencesFailed": "会议模型配置保存失败",
       "minutesGenerated": "会议纪要已生成",
       "minutesFailed": "会议纪要生成失败",
       "apiKeyRequired": "请先输入 LLM API Key。"

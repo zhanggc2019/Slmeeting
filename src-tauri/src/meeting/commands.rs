@@ -95,9 +95,16 @@ pub fn get_meeting_minutes(
     manager: State<'_, Arc<MeetingManager>>,
     meeting_id: String,
 ) -> Result<Option<MeetingMinutes>, String> {
-    manager
+    let mut minutes = manager
         .get_minutes(&meeting_id)
-        .map_err(|error| error.to_string())
+        .map_err(|error| error.to_string())?;
+    if let Some(saved) = minutes.as_mut() {
+        saved.content_markdown = render_markdown(&saved.content_json).unwrap_or_else(|error| {
+            error!("failed to render saved meeting minutes: {}", error);
+            saved.content_markdown.clone()
+        });
+    }
+    Ok(minutes)
 }
 
 /// Return the built-in minutes templates.
@@ -445,7 +452,56 @@ pub async fn generate_meeting_minutes(
     Ok(minutes)
 }
 
-/// Render the normalized minutes JSON as readable Markdown.
+/// Translate the known schema keys into readable Chinese section labels.
+fn minutes_label(key: &str) -> &str {
+    match key {
+        "executive_summary" | "summary" => "会议摘要",
+        "key_topics" => "讨论要点",
+        "decisions" => "会议决定",
+        "action_items" => "待办事项",
+        "risks" => "风险",
+        "open_questions" => "待确认事项",
+        "attendees" => "参会人员",
+        "business_impact" => "业务影响",
+        "requests_for_decision" => "待决策事项",
+        "next_steps" | "follow_up" => "后续安排",
+        "blockers" => "阻碍事项",
+        "task" => "任务",
+        "owner" => "负责人",
+        "due_date" => "截止时间",
+        "priority" => "优先级",
+        "status" => "状态",
+        "evidence" => "依据",
+        "title" => "标题",
+        _ => key,
+    }
+}
+
+/// Turn nested JSON values into readable text without exposing serialized objects.
+fn minutes_value(value: &Value) -> Option<String> {
+    match value {
+        Value::Null => None,
+        Value::String(text) if text.trim().is_empty() => None,
+        Value::String(text) => Some(text.to_string()),
+        Value::Bool(value) => Some(if *value { "是" } else { "否" }.to_string()),
+        Value::Number(value) => Some(value.to_string()),
+        Value::Array(items) => {
+            let values: Vec<_> = items.iter().filter_map(minutes_value).collect();
+            (!values.is_empty()).then(|| values.join("；"))
+        }
+        Value::Object(fields) => {
+            let values: Vec<_> = fields
+                .iter()
+                .filter_map(|(key, value)| {
+                    minutes_value(value).map(|text| format!("{}：{}", minutes_label(key), text))
+                })
+                .collect();
+            (!values.is_empty()).then(|| values.join("；"))
+        }
+    }
+}
+
+/// Render the normalized minutes JSON as readable Chinese Markdown.
 fn render_markdown(content_json: &str) -> anyhow::Result<String> {
     let value: Value = serde_json::from_str(content_json)?;
     let object = value
@@ -455,41 +511,71 @@ fn render_markdown(content_json: &str) -> anyhow::Result<String> {
     let title = object
         .get("title")
         .and_then(Value::as_str)
-        .unwrap_or("Meeting minutes");
+        .unwrap_or("会议纪要");
     markdown.push_str(&format!("# {title}\n\n"));
-    for (key, value) in object {
-        if key == "title" {
+    let order = [
+        "executive_summary",
+        "summary",
+        "key_topics",
+        "decisions",
+        "action_items",
+        "business_impact",
+        "risks",
+        "blockers",
+        "open_questions",
+        "requests_for_decision",
+        "next_steps",
+        "follow_up",
+        "attendees",
+    ];
+    let keys = order
+        .iter()
+        .filter_map(|key| object.get_key_value(*key))
+        .chain(
+            object
+                .iter()
+                .filter(|(key, _)| key != &"title" && !order.contains(&key.as_str())),
+        );
+    for (key, value) in keys {
+        if value.is_null() || value.as_array().is_some_and(Vec::is_empty) {
             continue;
         }
-        let heading = key
-            .split('_')
-            .map(|part| {
-                let mut chars = part.chars();
-                match chars.next() {
-                    Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
-                    None => String::new(),
-                }
-            })
-            .collect::<Vec<_>>()
-            .join(" ");
-        markdown.push_str(&format!("## {heading}\n\n"));
+        markdown.push_str(&format!("## {}\n\n", minutes_label(key)));
         match value {
             Value::String(text) => markdown.push_str(&format!("{text}\n\n")),
             Value::Array(items) => {
                 for item in items {
-                    if let Some(text) = item.as_str() {
+                    if let Some(text) = minutes_value(item) {
                         markdown.push_str(&format!("- {text}\n"));
-                    } else {
-                        markdown.push_str(&format!("- {}\n", serde_json::to_string(item)?));
                     }
                 }
                 markdown.push('\n');
             }
-            other => markdown.push_str(&format!(
-                "```json\n{}\n```\n\n",
-                serde_json::to_string_pretty(other)?
-            )),
+            other => {
+                if let Some(text) = minutes_value(other) {
+                    markdown.push_str(&format!("{text}\n\n"));
+                }
+            }
         }
     }
     Ok(markdown)
+}
+
+#[cfg(test)]
+mod minutes_render_tests {
+    use super::render_markdown;
+
+    /// Verify saved structured minutes are readable in Chinese without raw JSON.
+    #[test]
+    fn renders_chinese_sections_and_action_items() {
+        let json = r#"{"title":"项目例会","executive_summary":"确认发布计划","action_items":[{"task":"完成测试","owner":"张三","due_date":"周五","priority":null}],"risks":[]}"#;
+        let markdown = render_markdown(json).expect("valid minutes JSON");
+        assert!(markdown.contains("# 项目例会"));
+        assert!(markdown.contains("## 会议摘要"));
+        assert!(markdown.contains("## 待办事项"));
+        assert!(markdown.contains("完成测试"));
+        assert!(markdown.contains("张三"));
+        assert!(!markdown.contains("{\""));
+        assert!(!markdown.contains("null"));
+    }
 }

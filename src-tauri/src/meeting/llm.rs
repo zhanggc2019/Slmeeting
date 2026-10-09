@@ -81,8 +81,7 @@ pub async fn generate_minutes(
         );
     }
 
-    let system =
-        format!("{system_prompt}\n\nReturn valid JSON only. Do not include Markdown fences.");
+    let system = format!("{system_prompt}\n\n只返回有效的 JSON，不要使用 Markdown 代码块。JSON 键名保持模板指定的英文，自然语言内容全部使用简体中文。");
     let request = ChatRequest {
         model: &config.model,
         messages: vec![

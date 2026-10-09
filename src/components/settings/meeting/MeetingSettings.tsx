@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   FileAudio,
   Mic,
@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useTranslation } from "react-i18next";
+import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
 import {
   commands,
@@ -22,6 +23,14 @@ import {
 import { Button } from "../../ui/Button";
 import { Input } from "../../ui/Input";
 import { Select } from "../../ui/Select";
+import {
+  defaultMeetingPreferences,
+  loadMeetingPreferences,
+  meetingProfile,
+  saveMeetingPreferences,
+  type MeetingLlmProfile,
+} from "./meetingPreferences";
+import { formatMeetingTime } from "./meetingTime";
 
 /** Render the independent meeting workspace and offline import controls. */
 export const MeetingSettings: React.FC = () => {
@@ -32,11 +41,12 @@ export const MeetingSettings: React.FC = () => {
   const [segments, setSegments] = useState<TranscriptSegment[]>([]);
   const [minutes, setMinutes] = useState<MeetingMinutes | null>(null);
   const [progress, setProgress] = useState<MeetingProgressEvent | null>(null);
-  const [apiKey, setApiKey] = useState("");
-  const [providerId, setProviderId] = useState("deepseek");
-  const [baseUrl, setBaseUrl] = useState("https://api.deepseek.com");
-  const [model, setModel] = useState("deepseek-flash");
-  const [templateId, setTemplateId] = useState("standard");
+  const [preferences, setPreferences] = useState(defaultMeetingPreferences);
+  const [preferencesLoaded, setPreferencesLoaded] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const generatingRef = useRef(false);
+  const { providerId, templateId } = preferences;
+  const { apiKey, baseUrl, model } = meetingProfile(preferences, providerId);
   const [loading, setLoading] = useState(false);
   const [liveRecording, setLiveRecording] = useState(false);
   const [liveText, setLiveText] = useState("");
@@ -56,10 +66,54 @@ export const MeetingSettings: React.FC = () => {
     if (result.status === "ok") {
       setTemplates(result.data);
       if (result.data[0] && templateId === "standard") {
-        setTemplateId(result.data[0].id);
+        setPreferences((current) => ({
+          ...current,
+          templateId: result.data[0].id,
+        }));
       }
     }
   }, [templateId]);
+
+  useEffect(() => {
+    let active = true;
+    void loadMeetingPreferences()
+      .then((saved) => {
+        if (active) setPreferences(saved);
+      })
+      .catch(() => {
+        if (active) toast.error(t("settings.meeting.preferencesFailed"));
+      })
+      .finally(() => {
+        if (active) setPreferencesLoaded(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, [t]);
+
+  useEffect(() => {
+    if (!preferencesLoaded) return;
+    const timer = window.setTimeout(() => {
+      void saveMeetingPreferences(preferences).catch(() =>
+        toast.error(t("settings.meeting.preferencesFailed")),
+      );
+    }, 500);
+    return () => window.clearTimeout(timer);
+  }, [preferences, preferencesLoaded, t]);
+
+  /** Update one provider profile while retaining other providers' credentials. */
+  const updateProfile = (changes: Partial<MeetingLlmProfile>) => {
+    setPreferences((current) => ({
+      ...current,
+      profiles: {
+        ...current.profiles,
+        [current.providerId]: {
+          ...meetingProfile(current, current.providerId),
+          ...changes,
+        },
+      },
+    }));
+  };
 
   useEffect(() => {
     void loadSessions();
@@ -67,9 +121,10 @@ export const MeetingSettings: React.FC = () => {
   }, [loadSessions, loadTemplates]);
 
   useEffect(() => {
+    let active = true;
+    setSegments([]);
+    setMinutes(null);
     if (!selectedId) {
-      setSegments([]);
-      setMinutes(null);
       return;
     }
     void (async () => {
@@ -77,15 +132,22 @@ export const MeetingSettings: React.FC = () => {
         commands.getMeetingSegments(selectedId),
         commands.getMeetingMinutes(selectedId),
       ]);
+      if (!active) return;
       if (segmentResult.status === "ok") setSegments(segmentResult.data);
       if (minutesResult.status === "ok") setMinutes(minutesResult.data);
     })();
+    return () => {
+      active = false;
+    };
   }, [selectedId]);
 
   useEffect(() => {
     const unlisten = events.meetingProgressEvent.listen((event) => {
       setProgress(event.payload);
-      if (event.payload.phase === "failed") {
+      if (
+        event.payload.phase === "failed" &&
+        !(generatingRef.current && event.payload.meeting_id === selectedId)
+      ) {
         toast.error(t("settings.meeting.importFailed"), {
           description: event.payload.message ?? undefined,
         });
@@ -100,7 +162,7 @@ export const MeetingSettings: React.FC = () => {
     return () => {
       unlisten.then((stop) => stop());
     };
-  }, [loadSessions, t]);
+  }, [loadSessions, selectedId, t]);
 
   useEffect(() => {
     const unlisten = events.streamTextEvent.listen((event) => {
@@ -184,26 +246,43 @@ export const MeetingSettings: React.FC = () => {
 
   /** Ask the selected LLM provider to generate minutes from saved segments. */
   const generateMinutes = async () => {
-    if (!selectedId || (providerId !== "ollama" && !apiKey.trim())) {
+    if (generatingRef.current || !selectedId) return;
+    if (providerId !== "ollama" && !apiKey.trim()) {
       toast.error(t("settings.meeting.apiKeyRequired"));
       return;
     }
-    const result = await commands.generateMeetingMinutes(
-      selectedId,
-      templateId,
-      providerId,
-      baseUrl,
-      apiKey,
-      model,
-    );
-    if (result.status === "ok") {
-      setMinutes(result.data);
-      toast.success(t("settings.meeting.minutesGenerated"));
-      void loadSessions();
-    } else {
+    generatingRef.current = true;
+    setGenerating(true);
+    try {
+      try {
+        await saveMeetingPreferences(preferences);
+      } catch {
+        toast.error(t("settings.meeting.preferencesFailed"));
+      }
+      const result = await commands.generateMeetingMinutes(
+        selectedId,
+        templateId,
+        providerId,
+        baseUrl,
+        apiKey,
+        model,
+      );
+      if (result.status === "ok") {
+        setMinutes(result.data);
+        toast.success(t("settings.meeting.minutesGenerated"));
+        void loadSessions();
+      } else {
+        toast.error(t("settings.meeting.minutesFailed"), {
+          description: result.error,
+        });
+      }
+    } catch (error) {
       toast.error(t("settings.meeting.minutesFailed"), {
-        description: result.error,
+        description: String(error),
       });
+    } finally {
+      generatingRef.current = false;
+      setGenerating(false);
     }
   };
 
@@ -272,6 +351,7 @@ export const MeetingSettings: React.FC = () => {
                 key={session.id}
                 type="button"
                 onClick={() => setSelectedId(session.id)}
+                disabled={generating}
                 className={`block w-full text-start px-3 py-2 border-b border-mid-gray/10 hover:bg-background-ui/30 ${selectedId === session.id ? "bg-logo-primary/20" : ""}`}
               >
                 <span className="block text-sm truncate">{session.title}</span>
@@ -296,7 +376,9 @@ export const MeetingSettings: React.FC = () => {
               progress.phase !== "completed" && (
                 <p className="text-sm text-text/60">
                   {t("settings.meeting.progress", {
-                    phase: progress.phase,
+                    phase: t(`settings.meeting.phases.${progress.phase}`, {
+                      defaultValue: progress.phase,
+                    }),
                     percent: Math.round(progress.progress * 100),
                   })}
                 </p>
@@ -320,7 +402,7 @@ export const MeetingSettings: React.FC = () => {
                   >
                     <span className="text-text/40">
                       {t("settings.meeting.timestamp", {
-                        seconds: Math.round(segment.start_ms / 1000),
+                        time: formatMeetingTime(segment.start_ms),
                       })}
                     </span>{" "}
                     {segment.text}
@@ -364,59 +446,100 @@ export const MeetingSettings: React.FC = () => {
               isClearable={false}
               onChange={(value) => {
                 const next = value ?? "deepseek";
-                setProviderId(next);
-                if (next === "deepseek") {
-                  setBaseUrl("https://api.deepseek.com");
-                  setModel("deepseek-flash");
-                }
-                if (next === "openai") {
-                  setBaseUrl("https://api.openai.com/v1");
-                  setModel("gpt-4o-mini");
-                }
-                if (next === "openrouter") {
-                  setBaseUrl("https://openrouter.ai/api/v1");
-                  setModel("deepseek/deepseek-chat");
-                }
-                if (next === "ollama") {
-                  setBaseUrl("http://localhost:11434/v1");
-                  setModel("qwen3");
-                }
+                setPreferences((current) => ({ ...current, providerId: next }));
               }}
             />
             <Input
               value={baseUrl}
-              onChange={(event) => setBaseUrl(event.target.value)}
+              onChange={(event) =>
+                updateProfile({ baseUrl: event.target.value })
+              }
               placeholder={t("settings.meeting.baseUrl")}
             />
             <Select
               value={templateId}
               options={templates.map((template) => ({
                 value: template.id,
-                label: template.name,
+                label: t(`settings.meeting.templates.${template.id}`, {
+                  defaultValue: template.name,
+                }),
               }))}
               isClearable={false}
-              onChange={(value) => setTemplateId(value ?? "standard")}
+              onChange={(value) =>
+                setPreferences((current) => ({
+                  ...current,
+                  templateId: value ?? "standard",
+                }))
+              }
             />
             <Input
               type="password"
               value={apiKey}
-              onChange={(event) => setApiKey(event.target.value)}
+              onChange={(event) =>
+                updateProfile({ apiKey: event.target.value })
+              }
               placeholder={t("settings.meeting.apiKey")}
             />
             <Input
               value={model}
-              onChange={(event) => setModel(event.target.value)}
+              onChange={(event) => updateProfile({ model: event.target.value })}
               placeholder={t("settings.meeting.model")}
             />
             <Button
               onClick={generateMinutes}
-              disabled={!selectedId || segments.length === 0}
+              disabled={
+                !selectedId ||
+                segments.length === 0 ||
+                generating ||
+                !preferencesLoaded
+              }
             >
-              {t("settings.meeting.generateMinutes")}
+              {generating && (
+                <RefreshCw className="w-4 h-4 animate-spin mr-2" />
+              )}
+              {t(
+                generating
+                  ? "settings.meeting.generatingMinutes"
+                  : "settings.meeting.generateMinutes",
+              )}
             </Button>
+            {generating && (
+              <p
+                className="text-sm text-text/60"
+                role="status"
+                aria-live="polite"
+              >
+                {t("settings.meeting.generatingHint")}
+              </p>
+            )}
             {minutes && (
-              <article className="prose prose-sm max-w-none whitespace-pre-wrap text-text/90">
-                {minutes.content_markdown}
+              <article className="prose prose-sm max-w-none text-text/90">
+                <ReactMarkdown
+                  skipHtml
+                  components={{
+                    h1: ({ children }) => (
+                      <h1 className="text-lg font-semibold mb-3">{children}</h1>
+                    ),
+                    h2: ({ children }) => (
+                      <h2 className="text-base font-semibold mt-4 mb-2">
+                        {children}
+                      </h2>
+                    ),
+                    p: ({ children }) => (
+                      <p className="text-sm leading-6 mb-2">{children}</p>
+                    ),
+                    ul: ({ children }) => (
+                      <ul className="list-disc pl-5 space-y-1 mb-3">
+                        {children}
+                      </ul>
+                    ),
+                    li: ({ children }) => (
+                      <li className="text-sm leading-6">{children}</li>
+                    ),
+                  }}
+                >
+                  {minutes.content_markdown}
+                </ReactMarkdown>
               </article>
             )}
           </div>

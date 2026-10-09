@@ -346,24 +346,24 @@ pub fn builtin_templates() -> Vec<MeetingTemplate> {
     vec![
         MeetingTemplate {
             id: "standard".to_string(),
-            name: "Standard meeting minutes".to_string(),
-            description: "Summary, topics, decisions, action items, risks, and open questions."
+            name: "标准会议纪要".to_string(),
+            description: "会议摘要、讨论要点、决定、待办、风险和待确认事项。"
                 .to_string(),
-            system_prompt: "Create structured meeting minutes from the transcript. Return a JSON object with these keys: title, executive_summary, key_topics, decisions, action_items, risks, open_questions, attendees. Each action item should include task, owner, due_date, and priority when present. Do not invent facts that are absent from the transcript.".to_string(),
+            system_prompt: "根据转写内容生成结构化会议纪要。返回包含 title、executive_summary、key_topics、decisions、action_items、risks、open_questions、attendees 的 JSON 对象。待办事项在有依据时包含 task、owner、due_date 和 priority。除 JSON 键名外，所有自然语言内容使用简体中文。不要编造转写中没有的事实。".to_string(),
             is_builtin: true,
         },
         MeetingTemplate {
             id: "action_items".to_string(),
-            name: "Action-focused minutes".to_string(),
-            description: "Ownership, deadlines, blockers, and follow-up actions.".to_string(),
-            system_prompt: "Create action-focused meeting minutes from the transcript. Return a JSON object with these keys: title, summary, action_items, decisions, blockers, follow_up, attendees. Every action item must include task, owner, due_date, status, and evidence when those details appear in the transcript. Keep unknown fields as null and never invent facts.".to_string(),
+            name: "待办事项纪要".to_string(),
+            description: "负责人、截止时间、阻碍事项和后续行动。".to_string(),
+            system_prompt: "根据转写内容生成以行动为重点的会议纪要。返回包含 title、summary、action_items、decisions、blockers、follow_up、attendees 的 JSON 对象。待办事项在有依据时包含 task、owner、due_date、status 和 evidence；未知值设为 null。除 JSON 键名外，所有自然语言内容使用简体中文。不要编造事实。".to_string(),
             is_builtin: true,
         },
         MeetingTemplate {
             id: "executive_brief".to_string(),
-            name: "Executive brief".to_string(),
-            description: "Short outcome and risk briefing for leadership.".to_string(),
-            system_prompt: "Create a concise executive meeting brief from the transcript. Return a JSON object with these keys: title, executive_summary, business_impact, decisions, risks, requests_for_decision, next_steps. Focus on outcomes, trade-offs, owners, and deadlines. Do not infer or invent facts missing from the transcript.".to_string(),
+            name: "管理层简报".to_string(),
+            description: "面向管理层的简短成果与风险摘要。".to_string(),
+            system_prompt: "根据转写内容生成简短的管理层会议简报。返回包含 title、executive_summary、business_impact、decisions、risks、requests_for_decision、next_steps 的 JSON 对象。聚焦成果、权衡、负责人和截止时间。除 JSON 键名外，所有自然语言内容使用简体中文。不要推断或编造转写中没有的事实。".to_string(),
             is_builtin: true,
         },
     ]
