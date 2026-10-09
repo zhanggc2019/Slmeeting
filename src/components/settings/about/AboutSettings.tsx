@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { getVersion } from "@tauri-apps/api/app";
+import { getIdentifier, getVersion } from "@tauri-apps/api/app";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { SettingsGroup } from "../../ui/SettingsGroup";
 import { SettingContainer } from "../../ui/SettingContainer";
@@ -14,12 +14,20 @@ import { LogDirectory } from "../debug";
 export const AboutSettings: React.FC = () => {
   const { t } = useTranslation();
   const [version, setVersion] = useState("");
+  const [isMeetingBrand, setIsMeetingBrand] = useState(
+    import.meta.env.VITE_APP_DISPLAY_NAME === "石榴会议助手",
+  );
 
   useEffect(() => {
+    /** Detect the configured brand in local previews as well as packaged builds. */
     const fetchVersion = async () => {
       try {
-        const appVersion = await getVersion();
+        const [appVersion, identifier] = await Promise.all([
+          getVersion(),
+          getIdentifier(),
+        ]);
         setVersion(appVersion);
+        setIsMeetingBrand(identifier === "com.shiliu.meetingassistant");
       } catch (error) {
         console.error("Failed to get app version:", error);
         setVersion("0.1.2");
@@ -89,7 +97,11 @@ export const AboutSettings: React.FC = () => {
           layout="stacked"
         >
           <div className="text-sm text-mid-gray">
-            {t("settings.about.acknowledgments.ggml.details")}
+            {t(
+              isMeetingBrand
+                ? "settings.about.acknowledgments.ggml.meetingDetails"
+                : "settings.about.acknowledgments.ggml.details",
+            )}
           </div>
         </SettingContainer>
       </SettingsGroup>

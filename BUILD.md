@@ -123,10 +123,17 @@ The meeting assistant uses its own product name, application identifier, and ico
 ```powershell
 $meetingConfig = (Resolve-Path .\src-tauri\tauri.meeting.conf.json).Path
 $env:HANDY_APP_DISPLAY_NAME = '石榴会议助手'
+$env:HANDY_APP_VERSION = '0.10.2'
 $env:VITE_APP_DISPLAY_NAME = '石榴会议助手'
 # Use the CPU backend when Vulkan SDK is unavailable.
 $env:TRANSCRIBE_CMAKE_ARGS = '-DTRANSCRIBE_VULKAN=OFF'
 bun run tauri dev --release --target x86_64-pc-windows-msvc --config $meetingConfig
+```
+
+To create the separately branded Windows installer with the same environment variables:
+
+```powershell
+bun run tauri build --target x86_64-pc-windows-msvc --bundles nsis --config $meetingConfig --no-sign
 ```
 
 ## Linux Install (from source)

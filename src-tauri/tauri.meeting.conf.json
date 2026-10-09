@@ -1,6 +1,8 @@
 {
   "productName": "石榴会议助手",
-  "identifier": "com.pais.shiliu.meetingassistant",
+  "mainBinaryName": "shiliu-meeting-assistant",
+  "version": "0.10.2",
+  "identifier": "com.shiliu.meetingassistant",
   "bundle": {
     "createUpdaterArtifacts": false,
     "icon": [
@@ -8,7 +10,12 @@
       "icons-meeting/128x128.png",
       "icons-meeting/128x128@2x.png",
       "icons-meeting/icon.ico"
-    ]
+    ],
+    "windows": {
+      "nsis": {
+        "installerIcon": "icons-meeting/icon.ico"
+      }
+    }
   },
   "plugins": {
     "updater": {

@@ -483,6 +483,10 @@
       "importAudio": "导入音频",
       "history": "会议记录",
       "refresh": "刷新会议",
+      "deleteTitle": "删除会议记录",
+      "deleteConfirm": "确定删除“{{title}}”及其转写和纪要吗？此操作无法撤销。",
+      "deleted": "会议记录已删除",
+      "deleteFailed": "删除会议记录失败",
       "empty": "还没有会议记录。",
       "noSelection": "请选择一个会议",
       "noTranscript": "还没有转写片段。",
@@ -498,6 +502,31 @@
       "importStarted": "已开始导入音频",
       "importFailed": "音频导入失败",
       "minutes": "会议纪要",
+      "exportWord": "导出 Word",
+      "exportingWord": "正在导出 Word…",
+      "wordDocument": "Word 文档",
+      "wordExported": "Word 文档已保存",
+      "wordExportFailed": "导出 Word 文档失败",
+      "minutesView": {
+        "overview": "会议速览",
+        "decisions": "会议结论",
+        "action_items": "待办事项",
+        "key_topics": "讨论重点",
+        "business_impact": "业务影响",
+        "risks": "风险提醒",
+        "blockers": "当前阻碍",
+        "open_questions": "待确认问题",
+        "requests_for_decision": "待决策事项",
+        "next_steps": "下一步",
+        "follow_up": "后续跟进",
+        "attendees": "参会人员",
+        "other": "补充信息",
+        "owner": "负责人",
+        "due": "截止时间",
+        "priority": "优先级",
+        "status": "状态",
+        "evidence": "依据"
+      },
       "templates": {
         "standard": "标准会议纪要",
         "action_items": "待办事项纪要",
@@ -680,7 +709,8 @@
         "ggml": {
           "title": "ggml",
           "description": "OpenAI Whisper 自动语音识别模型的高性能推理",
-          "details": "Handy 使用 ggml 进行快速的本地语音转文字处理。感谢 Georgi Gerganov 和贡献者们的出色工作。"
+          "details": "Handy 使用 ggml 进行快速的本地语音转文字处理。感谢 Georgi Gerganov 和贡献者们的出色工作。",
+          "meetingDetails": "石榴会议助手使用 transcribe.cpp 与 ggml 在本地进行语音识别。感谢 Georgi Gerganov 和所有贡献者。"
         }
       },
       "whatsNewUpdates": {

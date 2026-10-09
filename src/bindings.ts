@@ -915,6 +915,14 @@ async listMeetings(limit: number | null) : Promise<Result<MeetingSession[], stri
     else return { status: "error", error: e  as any };
 }
 },
+async deleteMeeting(meetingId: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("delete_meeting", { meetingId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async listMeetingTemplates() : Promise<Result<MeetingTemplate[], string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("list_meeting_templates") };
@@ -950,6 +958,14 @@ async getMeetingSegments(meetingId: string) : Promise<Result<TranscriptSegment[]
 async getMeetingMinutes(meetingId: string) : Promise<Result<MeetingMinutes | null, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("get_meeting_minutes", { meetingId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async saveMeetingWordDocument(path: string, contents: number[]) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("save_meeting_word_document", { path, contents }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };

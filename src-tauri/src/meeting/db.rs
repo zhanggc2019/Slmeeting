@@ -250,6 +250,22 @@ impl MeetingManager {
             .context("failed to list meeting sessions")
     }
 
+    /// Delete one saved meeting and its transcript and minutes.
+    pub fn delete_session(&self, meeting_id: &str) -> Result<()> {
+        let state = self
+            .live_meeting
+            .lock()
+            .map_err(|_| anyhow!("live meeting state lock was poisoned"))?;
+        if state
+            .as_ref()
+            .is_some_and(|live| live.meeting_id == meeting_id)
+        {
+            return Err(anyhow!("cannot delete a meeting while it is recording"));
+        }
+        let mut connection = self.connection()?;
+        delete_session_rows(&mut connection, meeting_id)
+    }
+
     /// Load all final transcript segments in playback order.
     pub fn list_segments(&self, meeting_id: &str) -> Result<Vec<TranscriptSegment>> {
         let connection = self.connection()?;
@@ -339,6 +355,41 @@ impl MeetingManager {
             .optional()
             .context("failed to load meeting minutes")
     }
+}
+
+/// Remove a meeting and its dependent rows together after checking its lifecycle.
+fn delete_session_rows(connection: &mut Connection, meeting_id: &str) -> Result<()> {
+    let transaction = connection.transaction()?;
+    let state: Option<(String, Option<i64>)> = transaction
+        .query_row(
+            "SELECT status, ended_at FROM meeting_sessions WHERE id = ?1",
+            params![meeting_id],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .optional()?;
+    let (status, ended_at) = state.ok_or_else(|| anyhow!("meeting session not found"))?;
+    if ended_at.is_none()
+        && matches!(
+            status.as_str(),
+            "recording" | "processing" | "generating_minutes"
+        )
+    {
+        return Err(anyhow!("cannot delete a meeting while it is processing"));
+    }
+    transaction.execute(
+        "DELETE FROM meeting_segments WHERE meeting_id = ?1",
+        params![meeting_id],
+    )?;
+    transaction.execute(
+        "DELETE FROM meeting_minutes WHERE meeting_id = ?1",
+        params![meeting_id],
+    )?;
+    transaction.execute(
+        "DELETE FROM meeting_sessions WHERE id = ?1",
+        params![meeting_id],
+    )?;
+    transaction.commit()?;
+    Ok(())
 }
 
 /// Return the built-in templates shipped with the first meeting release.
@@ -451,5 +502,67 @@ fn status_from_string(status: &str) -> MeetingStatus {
         "failed" => MeetingStatus::Failed,
         "cancelled" => MeetingStatus::Cancelled,
         _ => MeetingStatus::Draft,
+    }
+}
+
+#[cfg(test)]
+mod deletion_tests {
+    use super::*;
+
+    /// Verify deletion removes dependent rows while preserving other meetings.
+    #[test]
+    fn removes_only_the_selected_meeting() {
+        let mut connection = Connection::open_in_memory().expect("in-memory database");
+        Migrations::new(MIGRATIONS.to_vec())
+            .to_latest(&mut connection)
+            .expect("meeting tables");
+        connection
+            .execute_batch(
+                "INSERT INTO meeting_sessions (id, title, source, status, created_at) VALUES
+                    ('one', 'One', 'audio_file', 'completed', 1),
+                    ('two', 'Two', 'audio_file', 'completed', 2);
+                 INSERT INTO meeting_segments (meeting_id, sequence, start_ms, end_ms, text)
+                    VALUES ('one', 0, 0, 1000, 'first'), ('two', 0, 0, 1000, 'second');
+                 INSERT INTO meeting_minutes
+                    (meeting_id, template_id, provider_id, model, content_json, content_markdown, created_at)
+                    VALUES ('one', 'standard', 'deepseek', 'model', '{}', 'first', 1),
+                           ('two', 'standard', 'deepseek', 'model', '{}', 'second', 2);",
+            )
+            .expect("sample meetings");
+
+        delete_session_rows(&mut connection, "one").expect("delete selected meeting");
+        for table in ["meeting_sessions", "meeting_segments", "meeting_minutes"] {
+            let sql = format!("SELECT COUNT(*) FROM {table} WHERE meeting_id = 'one'");
+            let query = if table == "meeting_sessions" {
+                "SELECT COUNT(*) FROM meeting_sessions WHERE id = 'one'".to_string()
+            } else {
+                sql
+            };
+            let count: i64 = connection.query_row(&query, [], |row| row.get(0)).unwrap();
+            assert_eq!(count, 0, "{table} should be cleared");
+        }
+        let remaining: i64 = connection
+            .query_row("SELECT COUNT(*) FROM meeting_sessions", [], |row| {
+                row.get(0)
+            })
+            .unwrap();
+        assert_eq!(remaining, 1);
+    }
+
+    /// Verify an active recording cannot be removed from underneath its worker.
+    #[test]
+    fn refuses_to_remove_active_meeting() {
+        let mut connection = Connection::open_in_memory().expect("in-memory database");
+        Migrations::new(MIGRATIONS.to_vec())
+            .to_latest(&mut connection)
+            .expect("meeting tables");
+        connection
+            .execute(
+                "INSERT INTO meeting_sessions (id, title, source, status, created_at)
+                 VALUES ('active', 'Active', 'microphone', 'recording', 1)",
+                [],
+            )
+            .expect("active meeting");
+        assert!(delete_session_rows(&mut connection, "active").is_err());
     }
 }

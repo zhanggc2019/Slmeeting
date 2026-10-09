@@ -83,6 +83,57 @@ pub fn app_log_dir(app: &tauri::AppHandle) -> Result<PathBuf, tauri::Error> {
     }
 }
 
+/// Move files into the new brand directory without replacing newer data.
+fn merge_brand_directory(old_dir: &Path, new_dir: &Path) -> std::io::Result<()> {
+    if !old_dir.exists() {
+        return Ok(());
+    }
+    if !new_dir.exists() {
+        return std::fs::rename(old_dir, new_dir);
+    }
+    for entry in std::fs::read_dir(old_dir)? {
+        let entry = entry?;
+        let old_path = entry.path();
+        let new_path = new_dir.join(entry.file_name());
+        if old_path.is_dir() && new_path.is_dir() {
+            merge_brand_directory(&old_path, &new_path)?;
+        } else if !new_path.exists() {
+            std::fs::rename(&old_path, &new_path)?;
+        }
+    }
+    Ok(())
+}
+
+/// Preserve the previous branded install's settings, models, meetings and logs.
+pub fn migrate_meeting_brand_data(app: &tauri::AppHandle) {
+    if is_portable() || app.config().identifier != "com.shiliu.meetingassistant" {
+        return;
+    }
+    let migrations = [
+        app.path().app_data_dir().ok().and_then(|new_dir| {
+            let old_dir = new_dir.parent()?.join("com.pais.shiliu.meetingassistant");
+            Some((old_dir, new_dir))
+        }),
+        app.path().app_log_dir().ok().and_then(|new_dir| {
+            let old_dir = new_dir
+                .parent()?
+                .parent()?
+                .join("com.pais.shiliu.meetingassistant")
+                .join("logs");
+            Some((old_dir, new_dir))
+        }),
+    ];
+    for (old_dir, new_dir) in migrations.into_iter().flatten() {
+        if let Err(error) = merge_brand_directory(&old_dir, &new_dir) {
+            log::warn!(
+                "could not migrate branded data from {}: {}",
+                old_dir.display(),
+                error
+            );
+        }
+    }
+}
+
 /// Resolve a relative path against the app data directory (portable-aware).
 /// Replaces `app.path().resolve(path, BaseDirectory::AppData)`.
 pub fn resolve_app_data(app: &tauri::AppHandle, relative: &str) -> Result<PathBuf, tauri::Error> {
@@ -112,6 +163,38 @@ fn is_valid_portable_marker(path: &std::path::Path) -> bool {
 mod tests {
     use super::*;
     use std::io::Write;
+
+    /// Verify saved data moves to the new brand identifier without replacing newer files.
+    #[test]
+    fn test_brand_directory_merge_preserves_newer_data() {
+        let root = std::env::temp_dir().join(format!(
+            "shiliu_brand_merge_{}_{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let old_dir = root.join("old");
+        let new_dir = root.join("new");
+        std::fs::create_dir_all(old_dir.join("models")).unwrap();
+        std::fs::create_dir_all(new_dir.join("models")).unwrap();
+        std::fs::write(old_dir.join("models").join("voice.bin"), b"model").unwrap();
+        std::fs::write(old_dir.join("settings_store.json"), b"old").unwrap();
+        std::fs::write(new_dir.join("settings_store.json"), b"new").unwrap();
+
+        merge_brand_directory(&old_dir, &new_dir).unwrap();
+
+        assert_eq!(
+            std::fs::read(new_dir.join("models").join("voice.bin")).unwrap(),
+            b"model"
+        );
+        assert_eq!(
+            std::fs::read(new_dir.join("settings_store.json")).unwrap(),
+            b"new"
+        );
+        std::fs::remove_dir_all(root).unwrap();
+    }
 
     #[test]
     fn test_valid_magic_string_enables_portable() {

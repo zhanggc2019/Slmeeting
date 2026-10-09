@@ -630,7 +630,8 @@
         "ggml": {
           "title": "ggml",
           "description": "Hochleistungs-Inferenz des Whisper-Spracherkennungsmodells von OpenAI",
-          "details": "Handy verwendet ggml für schnelle, lokale Sprach-zu-Text-Verarbeitung. Dank an Georgi Gerganov und die Mitwirkenden für ihre großartige Arbeit."
+          "details": "Handy verwendet ggml für schnelle, lokale Sprach-zu-Text-Verarbeitung. Dank an Georgi Gerganov und die Mitwirkenden für ihre großartige Arbeit.",
+          "meetingDetails": "Shiliu Meeting Assistant uses transcribe.cpp and ggml for local speech recognition. Thanks to Georgi Gerganov and all contributors."
         }
       },
       "whatsNewUpdates": {
@@ -644,6 +645,10 @@
       "importAudio": "Import audio",
       "history": "Meeting history",
       "refresh": "Refresh meetings",
+      "deleteTitle": "Delete meeting",
+      "deleteConfirm": "Delete “{{title}}” and its transcript and minutes? This cannot be undone.",
+      "deleted": "Meeting deleted",
+      "deleteFailed": "Could not delete meeting",
       "empty": "No meetings yet.",
       "noSelection": "Select a meeting",
       "noTranscript": "No transcript segments yet.",
@@ -658,6 +663,31 @@
       "importStarted": "Audio import started",
       "importFailed": "Audio import failed",
       "minutes": "Meeting minutes",
+      "exportWord": "Export Word",
+      "exportingWord": "Exporting Word…",
+      "wordDocument": "Word document",
+      "wordExported": "Word document saved",
+      "wordExportFailed": "Could not export Word document",
+      "minutesView": {
+        "overview": "At a glance",
+        "decisions": "Decisions",
+        "action_items": "Action items",
+        "key_topics": "Discussion highlights",
+        "business_impact": "Business impact",
+        "risks": "Risks",
+        "blockers": "Blockers",
+        "open_questions": "Open questions",
+        "requests_for_decision": "Decisions needed",
+        "next_steps": "Next steps",
+        "follow_up": "Follow-up",
+        "attendees": "Attendees",
+        "other": "Other details",
+        "owner": "Owner",
+        "due": "Due",
+        "priority": "Priority",
+        "status": "Status",
+        "evidence": "Source"
+      },
       "templates": {
         "standard": "Standard meeting minutes",
         "action_items": "Action-focused minutes",

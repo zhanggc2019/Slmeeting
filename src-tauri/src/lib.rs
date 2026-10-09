@@ -770,8 +770,10 @@ pub fn run(cli_args: CliArgs) {
             commands::history::update_recording_retention_period,
             meeting::create_meeting,
             meeting::list_meetings,
+            meeting::delete_meeting,
             meeting::get_meeting_segments,
             meeting::get_meeting_minutes,
+            meeting::save_meeting_word_document,
             meeting::list_meeting_templates,
             meeting::start_live_meeting,
             meeting::stop_live_meeting,
@@ -829,11 +831,27 @@ pub fn run(cli_args: CliArgs) {
                     Target::new(if let Some(data_dir) = portable::data_dir() {
                         TargetKind::Folder {
                             path: data_dir.join("logs"),
-                            file_name: Some("handy".into()),
+                            file_name: Some(
+                                if option_env!("HANDY_APP_DISPLAY_NAME") == Some("石榴会议助手")
+                                {
+                                    "shiliu-meeting-assistant"
+                                } else {
+                                    "handy"
+                                }
+                                .into(),
+                            ),
                         }
                     } else {
                         TargetKind::LogDir {
-                            file_name: Some("handy".into()),
+                            file_name: Some(
+                                if option_env!("HANDY_APP_DISPLAY_NAME") == Some("石榴会议助手")
+                                {
+                                    "shiliu-meeting-assistant"
+                                } else {
+                                    "handy"
+                                }
+                                .into(),
+                            ),
                         }
                     })
                     .filter(|metadata| {
@@ -902,6 +920,7 @@ pub fn run(cli_args: CliArgs) {
         ))
         .manage(cli_args.clone())
         .setup(move |app| {
+            portable::migrate_meeting_brand_data(app.handle());
             #[cfg(target_os = "windows")]
             log::info!(
                 "Vulkan layer policy: VK_LOADER_LAYERS_DISABLE={:?}, HANDY_KEEP_VULKAN_IMPLICIT_LAYERS={}",
@@ -955,14 +974,24 @@ pub fn run(cli_args: CliArgs) {
 
             // Create main window programmatically so we can set data_directory
             // for portable mode (redirects WebView2 cache to portable Data dir)
+            let meeting_brand = option_env!("HANDY_APP_DISPLAY_NAME").is_some();
+            let (width, height, min_width, min_height) = if meeting_brand {
+                (1080.0, 760.0, 900.0, 640.0)
+            } else {
+                (680.0, 570.0, 680.0, 570.0)
+            };
             let mut win_builder =
                 tauri::WebviewWindowBuilder::new(app, "main", tauri::WebviewUrl::App("/".into()))
                     .title(option_env!("HANDY_APP_DISPLAY_NAME").unwrap_or("Handy"))
-                    .inner_size(680.0, 570.0)
-                    .min_inner_size(680.0, 570.0)
+                    .inner_size(width, height)
+                    .min_inner_size(min_width, min_height)
                     .resizable(true)
                     .maximizable(true)
                     .visible(false);
+
+            if meeting_brand {
+                win_builder = win_builder.icon(tauri::image::Image::from_bytes(include_bytes!("../icons-meeting/128x128.png"))?)?;
+            }
 
             if let Some(data_dir) = portable::data_dir() {
                 win_builder = win_builder.data_directory(data_dir.join("webview"));

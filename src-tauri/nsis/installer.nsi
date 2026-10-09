@@ -49,6 +49,12 @@ ${StrLoc}
 !define SIDEBARIMAGE "{{sidebar_image}}"
 !define HEADERIMAGE "{{header_image}}"
 !define MAINBINARYNAME "{{main_binary_name}}"
+; Keep the translated product name while using an ASCII folder for the meeting brand.
+!if "${MAINBINARYNAME}" == "shiliu-meeting-assistant"
+  !define INSTALLFOLDER "ShiliuMeetingAssistant"
+!else
+  !define INSTALLFOLDER "${PRODUCTNAME}"
+!endif
 !define MAINBINARYSRCPATH "{{main_binary_path}}"
 !define BUNDLEID "{{bundle_id}}"
 !define COPYRIGHT "{{copyright}}"
@@ -85,7 +91,7 @@ OutFile "${OUTFILE}"
 ; We don't actually use this value as default install path,
 ; it's just for nsis to append the product name folder in the directory selector
 ; https://nsis.sourceforge.io/Reference/InstallDir
-!define PLACEHOLDER_INSTALL_DIR "placeholder\${PRODUCTNAME}"
+!define PLACEHOLDER_INSTALL_DIR "placeholder\${INSTALLFOLDER}"
 InstallDir "${PLACEHOLDER_INSTALL_DIR}"
 
 VIProductVersion "${VERSIONWITHBUILD}"
@@ -114,7 +120,7 @@ VIAddVersionKey "ProductVersion" "${VERSION}"
 
 !if "${INSTALLMODE}" == "both"
   !define MULTIUSER_MUI
-  !define MULTIUSER_INSTALLMODE_INSTDIR "${PRODUCTNAME}"
+  !define MULTIUSER_INSTALLMODE_INSTDIR "${INSTALLFOLDER}"
   !define MULTIUSER_INSTALLMODE_COMMANDLINE
   !if "${ARCH}" == "x64"
     !define MULTIUSER_USE_PROGRAMFILES64
@@ -219,14 +225,14 @@ Function PageLeaveInstallType
     StrCpy $PortableMode 1
     ; --- PORTABLE MODE --- Switch default directory to Desktop\Handy for portable
     ${If} $INSTDIR == "${PLACEHOLDER_INSTALL_DIR}"
-    ${OrIf} $INSTDIR == "$LOCALAPPDATA\${PRODUCTNAME}"
-      StrCpy $INSTDIR "$DESKTOP\${PRODUCTNAME}"
+    ${OrIf} $INSTDIR == "$LOCALAPPDATA\${INSTALLFOLDER}"
+      StrCpy $INSTDIR "$DESKTOP\${INSTALLFOLDER}"
     ${EndIf}
   ${Else}
     StrCpy $PortableMode 0
     ; Restore normal default if user switched back from portable
-    ${If} $INSTDIR == "$DESKTOP\${PRODUCTNAME}"
-      StrCpy $INSTDIR "$LOCALAPPDATA\${PRODUCTNAME}"
+    ${If} $INSTDIR == "$DESKTOP\${INSTALLFOLDER}"
+      StrCpy $INSTDIR "$LOCALAPPDATA\${INSTALLFOLDER}"
     ${EndIf}
   ${EndIf}
 FunctionEnd
@@ -564,22 +570,22 @@ Function .onInit
     !if "${INSTALLMODE}" == "perMachine"
       ${If} ${RunningX64}
         !if "${ARCH}" == "x64"
-          StrCpy $INSTDIR "$PROGRAMFILES64\${PRODUCTNAME}"
+          StrCpy $INSTDIR "$PROGRAMFILES64\${INSTALLFOLDER}"
         !else if "${ARCH}" == "arm64"
-          StrCpy $INSTDIR "$PROGRAMFILES64\${PRODUCTNAME}"
+          StrCpy $INSTDIR "$PROGRAMFILES64\${INSTALLFOLDER}"
         !else
-          StrCpy $INSTDIR "$PROGRAMFILES\${PRODUCTNAME}"
+          StrCpy $INSTDIR "$PROGRAMFILES\${INSTALLFOLDER}"
         !endif
       ${Else}
-        StrCpy $INSTDIR "$PROGRAMFILES\${PRODUCTNAME}"
+        StrCpy $INSTDIR "$PROGRAMFILES\${INSTALLFOLDER}"
       ${EndIf}
     !else if "${INSTALLMODE}" == "currentUser"
-      StrCpy $INSTDIR "$LOCALAPPDATA\${PRODUCTNAME}"
+      StrCpy $INSTDIR "$LOCALAPPDATA\${INSTALLFOLDER}"
     !endif
 
     ; --- PORTABLE MODE --- Override default dir for silent/passive portable installs
     ${If} $PortableMode = 1
-      StrCpy $INSTDIR "$DESKTOP\${PRODUCTNAME}"
+      StrCpy $INSTDIR "$DESKTOP\${INSTALLFOLDER}"
     ${Else}
       Call RestorePreviousInstallLocation
     ${EndIf}
@@ -1000,6 +1006,19 @@ Function RestorePreviousInstallLocation
   ReadRegStr $4 SHCTX "${MANUPRODUCTKEY}" ""
   StrCmp $4 "" +2 0
     StrCpy $INSTDIR $4
+  !if "${MAINBINARYNAME}" == "shiliu-meeting-assistant"
+    ; Move the previous brand's default location to the new ASCII folder.
+    ; Explicit custom install paths remain unchanged.
+    ${If} $INSTDIR == "$LOCALAPPDATA\${PRODUCTNAME}"
+      StrCpy $INSTDIR "$LOCALAPPDATA\${INSTALLFOLDER}"
+    ${ElseIf} $INSTDIR == "$PROGRAMFILES64\${PRODUCTNAME}"
+      StrCpy $INSTDIR "$PROGRAMFILES64\${INSTALLFOLDER}"
+    ${ElseIf} $INSTDIR == "$PROGRAMFILES\${PRODUCTNAME}"
+      StrCpy $INSTDIR "$PROGRAMFILES\${INSTALLFOLDER}"
+    ${ElseIf} $INSTDIR == "$DESKTOP\${PRODUCTNAME}"
+      StrCpy $INSTDIR "$DESKTOP\${INSTALLFOLDER}"
+    ${EndIf}
+  !endif
 FunctionEnd
 
 Function Skip

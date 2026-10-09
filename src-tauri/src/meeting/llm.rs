@@ -81,7 +81,9 @@ pub async fn generate_minutes(
         );
     }
 
-    let system = format!("{system_prompt}\n\n只返回有效的 JSON，不要使用 Markdown 代码块。JSON 键名保持模板指定的英文，自然语言内容全部使用简体中文。");
+    let system = format!(
+        "{system_prompt}\n\n纪要应简洁、便于快速浏览，优先提炼已确认的事实、结论和待办事项，不按发言顺序写成长篇复述。清理口头禅、重复和明显的转写噪音时，保留关键人名、时间、数字和决策；无法确认的内容标明待确认，不要凭空补全。行动项尽量明确写出谁做什么，只有转写中明确提到的负责人和截止时间才能填写；缺失时使用 null 或待确认，不要编造。只返回有效的 JSON，不要使用 Markdown 代码块。JSON 键名保持模板指定的英文，自然语言内容全部使用简体中文。"
+    );
     let request = ChatRequest {
         model: &config.model,
         messages: vec![

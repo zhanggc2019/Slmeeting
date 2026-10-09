@@ -76,6 +76,18 @@ pub fn list_meetings(
         .map_err(|error| error.to_string())
 }
 
+/// Delete a saved meeting and its generated content.
+#[tauri::command]
+#[specta::specta]
+pub fn delete_meeting(
+    manager: State<'_, Arc<MeetingManager>>,
+    meeting_id: String,
+) -> Result<(), String> {
+    manager
+        .delete_session(&meeting_id)
+        .map_err(|error| error.to_string())
+}
+
 /// Load all transcript segments belonging to one meeting.
 #[tauri::command]
 #[specta::specta]
@@ -105,6 +117,21 @@ pub fn get_meeting_minutes(
         });
     }
     Ok(minutes)
+}
+
+/// Save a generated Word document at the path selected by the user.
+#[tauri::command]
+#[specta::specta]
+pub fn save_meeting_word_document(path: String, contents: Vec<u8>) -> Result<(), String> {
+    let destination = std::path::Path::new(&path);
+    let is_docx = destination
+        .extension()
+        .and_then(|extension| extension.to_str())
+        .is_some_and(|extension| extension.eq_ignore_ascii_case("docx"));
+    if !is_docx || contents.is_empty() {
+        return Err("A nonempty .docx document and destination are required".to_string());
+    }
+    std::fs::write(destination, contents).map_err(|error| error.to_string())
 }
 
 /// Return the built-in minutes templates.

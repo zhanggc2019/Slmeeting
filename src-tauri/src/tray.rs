@@ -189,6 +189,9 @@ fn windows_taskbar_theme() -> Option<AppTheme> {
 /// blocked (macOS Secure Input); recording/transcribing states keep their
 /// normal icons so in-flight activity stays recognizable.
 pub fn get_icon_path(theme: AppTheme, state: TrayIconState, warning: bool) -> &'static str {
+    if option_env!("HANDY_APP_DISPLAY_NAME").is_some() {
+        return "resources/shiliu_tray.png";
+    }
     if warning && state == TrayIconState::Idle {
         return match theme {
             AppTheme::Dark => "resources/tray_idle_warning.png",
@@ -443,11 +446,14 @@ pub fn tray_tooltip() -> String {
     version_label()
 }
 
+/// Format the name and version used by the tray menu and tooltip.
 fn version_label() -> String {
+    let name = option_env!("HANDY_APP_DISPLAY_NAME").unwrap_or("Handy");
+    let version = option_env!("HANDY_APP_VERSION").unwrap_or(env!("CARGO_PKG_VERSION"));
     if cfg!(debug_assertions) {
-        format!("Handy v{} (Dev)", env!("CARGO_PKG_VERSION"))
+        format!("{name} v{version} (Dev)")
     } else {
-        format!("Handy v{}", env!("CARGO_PKG_VERSION"))
+        format!("{name} v{version}")
     }
 }
 

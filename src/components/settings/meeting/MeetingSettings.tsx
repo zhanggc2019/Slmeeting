@@ -1,15 +1,16 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   FileAudio,
+  FileDown,
   Mic,
   RefreshCw,
   Sparkles,
   Square,
+  Trash2,
   Upload,
 } from "lucide-react";
-import { open } from "@tauri-apps/plugin-dialog";
+import { ask, open, save } from "@tauri-apps/plugin-dialog";
 import { useTranslation } from "react-i18next";
-import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
 import {
   commands,
@@ -31,10 +32,11 @@ import {
   type MeetingLlmProfile,
 } from "./meetingPreferences";
 import { formatMeetingTime } from "./meetingTime";
+import { MeetingMinutesView } from "./MeetingMinutesView";
 
 /** Render the independent meeting workspace and offline import controls. */
 export const MeetingSettings: React.FC = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [sessions, setSessions] = useState<MeetingSession[]>([]);
   const [templates, setTemplates] = useState<MeetingTemplate[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -44,7 +46,10 @@ export const MeetingSettings: React.FC = () => {
   const [preferences, setPreferences] = useState(defaultMeetingPreferences);
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [exportingWord, setExportingWord] = useState(false);
   const generatingRef = useRef(false);
+  const minutesRef = useRef<HTMLDivElement>(null);
   const { providerId, templateId } = preferences;
   const { apiKey, baseUrl, model } = meetingProfile(preferences, providerId);
   const [loading, setLoading] = useState(false);
@@ -271,6 +276,10 @@ export const MeetingSettings: React.FC = () => {
         setMinutes(result.data);
         toast.success(t("settings.meeting.minutesGenerated"));
         void loadSessions();
+        window.setTimeout(
+          () => minutesRef.current?.scrollIntoView({ behavior: "smooth" }),
+          0,
+        );
       } else {
         toast.error(t("settings.meeting.minutesFailed"), {
           description: result.error,
@@ -287,6 +296,79 @@ export const MeetingSettings: React.FC = () => {
   };
 
   const selectedSession = sessions.find((session) => session.id === selectedId);
+
+  /** Export the selected structured minutes to an editable Word document. */
+  const exportWord = async () => {
+    if (!minutes || exportingWord) return;
+    const suggestedName = `${(selectedSession?.title || t("settings.meeting.minutes")).replace(/[<>:"/\\|?*]/g, "_")}.docx`;
+    const path = await save({
+      defaultPath: suggestedName,
+      filters: [
+        { name: t("settings.meeting.wordDocument"), extensions: ["docx"] },
+      ],
+    });
+    if (!path) return;
+    setExportingWord(true);
+    try {
+      const { createMeetingWordDocument } = await import("./meetingWordExport");
+      const document = await createMeetingWordDocument(
+        minutes,
+        t,
+        i18n.language,
+      );
+      const result = await commands.saveMeetingWordDocument(
+        path,
+        Array.from(document),
+      );
+      if (result.status === "error") throw new Error(result.error);
+      toast.success(t("settings.meeting.wordExported"));
+    } catch (error) {
+      toast.error(t("settings.meeting.wordExportFailed"), {
+        description: String(error),
+      });
+    } finally {
+      setExportingWord(false);
+    }
+  };
+
+  /** Confirm and remove a meeting, then select the next available record. */
+  const deleteMeeting = async (session: MeetingSession) => {
+    if (deletingId || generating) return;
+    const confirmed = await ask(
+      t("settings.meeting.deleteConfirm", { title: session.title }),
+      {
+        title: t("settings.meeting.deleteTitle"),
+        kind: "warning",
+      },
+    );
+    if (!confirmed) return;
+    setDeletingId(session.id);
+    try {
+      const result = await commands.deleteMeeting(session.id);
+      if (result.status === "error") {
+        toast.error(t("settings.meeting.deleteFailed"), {
+          description: result.error,
+        });
+        return;
+      }
+      setSessions((current) =>
+        current.filter((item) => item.id !== session.id),
+      );
+      if (selectedId === session.id) {
+        setSelectedId(
+          sessions.find((item) => item.id !== session.id)?.id ?? null,
+        );
+        setProgress(null);
+      }
+      toast.success(t("settings.meeting.deleted"));
+    } catch (error) {
+      toast.error(t("settings.meeting.deleteFailed"), {
+        description: String(error),
+      });
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   return (
     <div className="max-w-4xl w-full mx-auto space-y-6">
@@ -347,18 +429,38 @@ export const MeetingSettings: React.FC = () => {
             </p>
           ) : (
             sessions.map((session) => (
-              <button
+              <div
                 key={session.id}
-                type="button"
-                onClick={() => setSelectedId(session.id)}
-                disabled={generating}
-                className={`block w-full text-start px-3 py-2 border-b border-mid-gray/10 hover:bg-background-ui/30 ${selectedId === session.id ? "bg-logo-primary/20" : ""}`}
+                className={`flex items-center border-b border-mid-gray/10 hover:bg-background-ui/30 ${selectedId === session.id ? "bg-logo-primary/20" : ""}`}
               >
-                <span className="block text-sm truncate">{session.title}</span>
-                <span className="block text-xs text-text/50">
-                  {session.status}
-                </span>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedId(session.id)}
+                  disabled={generating || deletingId === session.id}
+                  className="min-w-0 flex-1 text-start px-3 py-2"
+                >
+                  <span className="block text-sm truncate">
+                    {session.title}
+                  </span>
+                  <span className="block text-xs text-text/50">
+                    {session.status}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void deleteMeeting(session)}
+                  disabled={
+                    generating ||
+                    deletingId !== null ||
+                    (liveRecording && session.id === selectedId)
+                  }
+                  className="p-2 mr-1 text-text/50 hover:text-red-500 disabled:opacity-40"
+                  aria-label={t("settings.meeting.deleteTitle")}
+                  title={t("settings.meeting.deleteTitle")}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
             ))
           )}
         </div>
@@ -512,39 +614,28 @@ export const MeetingSettings: React.FC = () => {
                 {t("settings.meeting.generatingHint")}
               </p>
             )}
-            {minutes && (
-              <article className="prose prose-sm max-w-none text-text/90">
-                <ReactMarkdown
-                  skipHtml
-                  components={{
-                    h1: ({ children }) => (
-                      <h1 className="text-lg font-semibold mb-3">{children}</h1>
-                    ),
-                    h2: ({ children }) => (
-                      <h2 className="text-base font-semibold mt-4 mb-2">
-                        {children}
-                      </h2>
-                    ),
-                    p: ({ children }) => (
-                      <p className="text-sm leading-6 mb-2">{children}</p>
-                    ),
-                    ul: ({ children }) => (
-                      <ul className="list-disc pl-5 space-y-1 mb-3">
-                        {children}
-                      </ul>
-                    ),
-                    li: ({ children }) => (
-                      <li className="text-sm leading-6">{children}</li>
-                    ),
-                  }}
-                >
-                  {minutes.content_markdown}
-                </ReactMarkdown>
-              </article>
-            )}
           </div>
         </div>
       </div>
+      {minutes && (
+        <div ref={minutesRef}>
+          <div className="mb-3 flex justify-end">
+            <Button
+              onClick={exportWord}
+              disabled={exportingWord}
+              variant="secondary"
+            >
+              <FileDown className="mr-2 h-4 w-4" />
+              {t(
+                exportingWord
+                  ? "settings.meeting.exportingWord"
+                  : "settings.meeting.exportWord",
+              )}
+            </Button>
+          </div>
+          <MeetingMinutesView minutes={minutes} />
+        </div>
+      )}
     </div>
   );
 };

@@ -630,7 +630,8 @@
         "ggml": {
           "title": "ggml",
           "description": "OpenAI의 Whisper 자동 음성 인식 모델의 고성능 추론",
-          "details": "Handy는 빠르고 로컬 음성-텍스트 처리를 위해 ggml를 사용합니다. Georgi Gerganov와 기여자들의 놀라운 작업에 감사드립니다."
+          "details": "Handy는 빠르고 로컬 음성-텍스트 처리를 위해 ggml를 사용합니다. Georgi Gerganov와 기여자들의 놀라운 작업에 감사드립니다.",
+          "meetingDetails": "Shiliu Meeting Assistant uses transcribe.cpp and ggml for local speech recognition. Thanks to Georgi Gerganov and all contributors."
         }
       },
       "whatsNewUpdates": {
@@ -644,6 +645,10 @@
       "importAudio": "Import audio",
       "history": "Meeting history",
       "refresh": "Refresh meetings",
+      "deleteTitle": "Delete meeting",
+      "deleteConfirm": "Delete “{{title}}” and its transcript and minutes? This cannot be undone.",
+      "deleted": "Meeting deleted",
+      "deleteFailed": "Could not delete meeting",
       "empty": "No meetings yet.",
       "noSelection": "Select a meeting",
       "noTranscript": "No transcript segments yet.",
@@ -658,6 +663,31 @@
       "importStarted": "Audio import started",
       "importFailed": "Audio import failed",
       "minutes": "Meeting minutes",
+      "exportWord": "Export Word",
+      "exportingWord": "Exporting Word…",
+      "wordDocument": "Word document",
+      "wordExported": "Word document saved",
+      "wordExportFailed": "Could not export Word document",
+      "minutesView": {
+        "overview": "At a glance",
+        "decisions": "Decisions",
+        "action_items": "Action items",
+        "key_topics": "Discussion highlights",
+        "business_impact": "Business impact",
+        "risks": "Risks",
+        "blockers": "Blockers",
+        "open_questions": "Open questions",
+        "requests_for_decision": "Decisions needed",
+        "next_steps": "Next steps",
+        "follow_up": "Follow-up",
+        "attendees": "Attendees",
+        "other": "Other details",
+        "owner": "Owner",
+        "due": "Due",
+        "priority": "Priority",
+        "status": "Status",
+        "evidence": "Source"
+      },
       "templates": {
         "standard": "Standard meeting minutes",
         "action_items": "Action-focused minutes",
