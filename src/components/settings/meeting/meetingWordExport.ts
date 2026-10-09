@@ -144,7 +144,7 @@ export async function createMeetingWordDocument(
             new TextRun({
               text: `${index + 1}.  `,
               bold: true,
-              color: "BE185D",
+              color: "2563EB",
             }),
             new TextRun({ text: line }),
           ],
@@ -214,7 +214,7 @@ export async function createMeetingWordDocument(
             font: "Microsoft YaHei",
             size: 24,
             bold: true,
-            color: "AD1457",
+            color: "1D4ED8",
           },
         },
       ],

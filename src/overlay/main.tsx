@@ -10,6 +10,10 @@ import {
 import type { Theme } from "@/bindings";
 import "@/i18n";
 
+if (import.meta.env.VITE_APP_DISPLAY_NAME === "石榴会议助手") {
+  document.documentElement.dataset.brand = "shiliu";
+}
+
 // A separate webview from the settings window, so the overlay has to set
 // `data-theme` on its own document: last-known theme before render (shared
 // localStorage) to avoid a flash, reconcile with the persisted setting in case

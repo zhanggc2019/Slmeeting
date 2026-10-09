@@ -134,6 +134,21 @@ pub fn save_meeting_word_document(path: String, contents: Vec<u8>) -> Result<(),
     std::fs::write(destination, contents).map_err(|error| error.to_string())
 }
 
+/// Save a standalone HTML minutes document at a user-selected .html path.
+#[tauri::command]
+#[specta::specta]
+pub fn save_meeting_html_document(path: String, contents: String) -> Result<(), String> {
+    let destination = std::path::Path::new(&path);
+    let is_html = destination
+        .extension()
+        .and_then(|extension| extension.to_str())
+        .is_some_and(|extension| extension.eq_ignore_ascii_case("html"));
+    if !is_html || contents.trim().is_empty() {
+        return Err("A nonempty .html document and destination are required".to_string());
+    }
+    std::fs::write(destination, contents).map_err(|error| error.to_string())
+}
+
 /// Return the built-in minutes templates.
 #[tauri::command]
 #[specta::specta]

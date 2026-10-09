@@ -774,6 +774,7 @@ pub fn run(cli_args: CliArgs) {
             meeting::get_meeting_segments,
             meeting::get_meeting_minutes,
             meeting::save_meeting_word_document,
+            meeting::save_meeting_html_document,
             meeting::list_meeting_templates,
             meeting::start_live_meeting,
             meeting::stop_live_meeting,

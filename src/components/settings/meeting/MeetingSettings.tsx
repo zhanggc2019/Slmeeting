@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   FileAudio,
   FileDown,
+  FileCode2,
   Mic,
   RefreshCw,
   Sparkles,
@@ -22,14 +23,12 @@ import {
   type TranscriptSegment,
 } from "@/bindings";
 import { Button } from "../../ui/Button";
-import { Input } from "../../ui/Input";
 import { Select } from "../../ui/Select";
 import {
   defaultMeetingPreferences,
   loadMeetingPreferences,
   meetingProfile,
   saveMeetingPreferences,
-  type MeetingLlmProfile,
 } from "./meetingPreferences";
 import { formatMeetingTime } from "./meetingTime";
 import { MeetingMinutesView } from "./MeetingMinutesView";
@@ -45,9 +44,13 @@ export const MeetingSettings: React.FC = () => {
   const [progress, setProgress] = useState<MeetingProgressEvent | null>(null);
   const [preferences, setPreferences] = useState(defaultMeetingPreferences);
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
+  const preferencesRef = useRef(preferences);
+  const preferencesLoadedRef = useRef(false);
+  preferencesRef.current = preferences;
   const [generating, setGenerating] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [exportingWord, setExportingWord] = useState(false);
+  const [exportingHtml, setExportingHtml] = useState(false);
   const generatingRef = useRef(false);
   const selectedIdRef = useRef<string | null>(selectedId);
   selectedIdRef.current = selectedId;
@@ -110,7 +113,10 @@ export const MeetingSettings: React.FC = () => {
         if (active) toast.error(t("settings.meeting.preferencesFailed"));
       })
       .finally(() => {
-        if (active) setPreferencesLoaded(true);
+        if (active) {
+          setPreferencesLoaded(true);
+          preferencesLoadedRef.current = true;
+        }
       });
     return () => {
       active = false;
@@ -127,19 +133,14 @@ export const MeetingSettings: React.FC = () => {
     return () => window.clearTimeout(timer);
   }, [preferences, preferencesLoaded, t]);
 
-  /** Update one provider profile while retaining other providers' credentials. */
-  const updateProfile = (changes: Partial<MeetingLlmProfile>) => {
-    setPreferences((current) => ({
-      ...current,
-      profiles: {
-        ...current.profiles,
-        [current.providerId]: {
-          ...meetingProfile(current, current.providerId),
-          ...changes,
-        },
-      },
-    }));
-  };
+  useEffect(
+    () => () => {
+      if (preferencesLoadedRef.current) {
+        void saveMeetingPreferences(preferencesRef.current);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     void loadSessions();
@@ -359,6 +360,33 @@ export const MeetingSettings: React.FC = () => {
     }
   };
 
+  /** Export the selected minutes as a self-contained, styled HTML page. */
+  const exportHtml = async () => {
+    if (!minutes || exportingHtml) return;
+    const suggestedName = `${(selectedSession?.title || t("settings.meeting.minutes")).replace(/[<>:"/\\|?*]/g, "_")}.html`;
+    const path = await save({
+      defaultPath: suggestedName,
+      filters: [
+        { name: t("settings.meeting.htmlDocument"), extensions: ["html"] },
+      ],
+    });
+    if (!path) return;
+    setExportingHtml(true);
+    try {
+      const { createMeetingHtmlDocument } = await import("./meetingHtmlExport");
+      const html = createMeetingHtmlDocument(minutes, t, i18n.language);
+      const result = await commands.saveMeetingHtmlDocument(path, html);
+      if (result.status === "error") throw new Error(result.error);
+      toast.success(t("settings.meeting.htmlExported"));
+    } catch (error) {
+      toast.error(t("settings.meeting.htmlExportFailed"), {
+        description: String(error),
+      });
+    } finally {
+      setExportingHtml(false);
+    }
+  };
+
   /** Confirm and remove a meeting, then select the next available record. */
   const deleteMeeting = async (session: MeetingSession) => {
     if (deletingId || generating) return;
@@ -399,8 +427,8 @@ export const MeetingSettings: React.FC = () => {
   };
 
   return (
-    <div className="max-w-4xl w-full mx-auto space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="max-w-5xl w-full mx-auto space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-xs font-medium text-mid-gray uppercase tracking-wide">
             {t("settings.meeting.title")}
@@ -409,11 +437,11 @@ export const MeetingSettings: React.FC = () => {
             {t("settings.meeting.description")}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             onClick={liveRecording ? stopLiveMeeting : startLiveMeeting}
             disabled={loading}
-            className="flex items-center gap-2"
+            className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap"
           >
             {liveRecording ? (
               <Square className="w-4 h-4" />
@@ -429,7 +457,7 @@ export const MeetingSettings: React.FC = () => {
           <Button
             onClick={importAudio}
             disabled={loading || liveRecording}
-            className="flex items-center gap-2"
+            className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap"
           >
             <Upload className="w-4 h-4" />
             {t("settings.meeting.importAudio")}
@@ -437,7 +465,7 @@ export const MeetingSettings: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-[14rem_1fr] gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-[14rem_minmax(0,1fr)]">
         <div className="border border-mid-gray/20 rounded-lg overflow-hidden">
           <div className="px-3 py-2 border-b border-mid-gray/20 flex items-center justify-between">
             <span className="text-sm font-medium">
@@ -493,7 +521,7 @@ export const MeetingSettings: React.FC = () => {
           )}
         </div>
 
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           <div className="border border-mid-gray/20 rounded-lg p-4 space-y-3">
             <div className="flex items-center gap-2">
               <FileAudio className="w-5 h-5 text-logo-primary" />
@@ -542,50 +570,21 @@ export const MeetingSettings: React.FC = () => {
             </div>
           </div>
 
-          <div className="border border-mid-gray/20 rounded-lg p-4 space-y-3">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-logo-primary" />
-              <span className="font-medium">
-                {t("settings.meeting.minutes")}
+          <div className="border border-mid-gray/20 rounded-xl p-4 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-logo-primary" />
+                <span className="font-medium">
+                  {t("settings.meeting.minutes")}
+                </span>
+              </div>
+              <span className="rounded-full bg-logo-primary/10 px-2.5 py-1 text-xs text-text/65">
+                {t(`settings.meeting.providers.${providerId}`)} · {model}
               </span>
             </div>
-            <Select
-              value={providerId}
-              options={[
-                {
-                  value: "deepseek",
-                  label: t("settings.meeting.providers.deepseek"),
-                },
-                {
-                  value: "openai",
-                  label: t("settings.meeting.providers.openai"),
-                },
-                {
-                  value: "openrouter",
-                  label: t("settings.meeting.providers.openrouter"),
-                },
-                {
-                  value: "ollama",
-                  label: t("settings.meeting.providers.ollama"),
-                },
-                {
-                  value: "custom",
-                  label: t("settings.meeting.providers.custom"),
-                },
-              ]}
-              isClearable={false}
-              onChange={(value) => {
-                const next = value ?? "deepseek";
-                setPreferences((current) => ({ ...current, providerId: next }));
-              }}
-            />
-            <Input
-              value={baseUrl}
-              onChange={(event) =>
-                updateProfile({ baseUrl: event.target.value })
-              }
-              placeholder={t("settings.meeting.baseUrl")}
-            />
+            <p className="text-xs text-text/55">
+              {t("settings.meeting.modelSettingsHint")}
+            </p>
             <Select
               value={templateId}
               options={templates.map((template) => ({
@@ -602,32 +601,20 @@ export const MeetingSettings: React.FC = () => {
                 }))
               }
             />
-            <Input
-              type="password"
-              value={apiKey}
-              onChange={(event) =>
-                updateProfile({ apiKey: event.target.value })
-              }
-              placeholder={t("settings.meeting.apiKey")}
-            />
-            <Input
-              value={model}
-              onChange={(event) => updateProfile({ model: event.target.value })}
-              placeholder={t("settings.meeting.model")}
-            />
-            <Button
-              onClick={generateMinutes}
-              disabled={!selectedId || generating || !preferencesLoaded}
-            >
-              {generating && (
-                <RefreshCw className="w-4 h-4 animate-spin mr-2" />
-              )}
-              {t(
-                generating
-                  ? "settings.meeting.generatingMinutes"
-                  : "settings.meeting.generateMinutes",
-              )}
-            </Button>
+            <div className="flex flex-wrap items-center gap-3 pt-1">
+              <Button
+                onClick={generateMinutes}
+                disabled={!selectedId || generating || !preferencesLoaded}
+                className="inline-flex min-h-9 shrink-0 items-center justify-center gap-2 whitespace-nowrap"
+              >
+                {generating && <RefreshCw className="h-4 w-4 animate-spin" />}
+                {t(
+                  generating
+                    ? "settings.meeting.generatingMinutes"
+                    : "settings.meeting.generateMinutes",
+                )}
+              </Button>
+            </div>
             {generating && (
               <p
                 className="text-sm text-text/60"
@@ -642,13 +629,27 @@ export const MeetingSettings: React.FC = () => {
       </div>
       {minutes && (
         <div ref={minutesRef}>
-          <div className="mb-3 flex justify-end">
+          <div className="mb-3 flex flex-wrap justify-end gap-2">
+            <Button
+              onClick={exportHtml}
+              disabled={exportingHtml}
+              variant="secondary"
+              className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap"
+            >
+              <FileCode2 className="h-4 w-4" />
+              {t(
+                exportingHtml
+                  ? "settings.meeting.exportingHtml"
+                  : "settings.meeting.exportHtml",
+              )}
+            </Button>
             <Button
               onClick={exportWord}
               disabled={exportingWord}
               variant="secondary"
+              className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap"
             >
-              <FileDown className="mr-2 h-4 w-4" />
+              <FileDown className="h-4 w-4" />
               {t(
                 exportingWord
                   ? "settings.meeting.exportingWord"

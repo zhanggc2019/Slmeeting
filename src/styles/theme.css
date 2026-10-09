@@ -75,3 +75,17 @@
   --color-warning: var(--dark-color-warning);
   --color-error: var(--dark-color-error);
 }
+
+/* The meeting assistant ships with its own blue visual identity. Keep the
+   upstream Handy palette intact when this branded build is not selected. */
+:root[data-brand="shiliu"] {
+  --light-color-text: #15243d;
+  --light-color-background: #f7faff;
+  --light-color-logo-primary: #2563eb;
+  --light-color-logo-stroke: #173c82;
+  --dark-color-text: #e9f2ff;
+  --dark-color-background: #111d32;
+  --dark-color-logo-primary: #60a5fa;
+  --dark-color-logo-stroke: #a9d7ff;
+  --color-background-ui: #2563eb;
+}

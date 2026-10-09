@@ -212,6 +212,14 @@
     },
     "models": {
       "title": "Transcription Models",
+      "tabs": {
+        "transcription": "Transcription models",
+        "minutes": "Minutes generation models"
+      },
+      "minutesDescription": "Choose an LLM provider for meeting minutes. These settings are saved for future meetings.",
+      "minutesProvider": "Provider",
+      "minutesSaved": "Model settings saved",
+      "minutesAutosave": "Changes are saved automatically",
       "description": "Select a transcription model or download additional models. Different models offer varying levels of accuracy and speed.",
       "searchPlaceholder": "Search models by name…",
       "yourModels": "Downloaded Models",
@@ -514,6 +522,11 @@
       "importFailed": "Audio import failed",
       "minutes": "Meeting minutes",
       "exportWord": "Export Word",
+      "exportHtml": "Export HTML",
+      "exportingHtml": "Exporting HTML…",
+      "htmlDocument": "HTML document",
+      "htmlExported": "HTML document saved",
+      "htmlExportFailed": "Could not export HTML document",
       "exportingWord": "Exporting Word…",
       "wordDocument": "Word document",
       "wordExported": "Word document saved",
@@ -553,13 +566,14 @@
       },
       "apiKey": "LLM API key",
       "model": "LLM model",
+      "modelSettingsHint": "Configure the provider, model, and API key under Models → Minutes generation models.",
       "generateMinutes": "Generate minutes",
       "generatingMinutes": "Generating minutes…",
       "generatingHint": "Organizing the transcript. Please wait.",
       "preferencesFailed": "Could not save meeting model settings",
       "minutesGenerated": "Meeting minutes generated",
       "minutesFailed": "Failed to generate meeting minutes",
-      "apiKeyRequired": "Enter an LLM API key first."
+      "apiKeyRequired": "Enter an API key under Models → Minutes generation models first."
     },
     "debug": {
       "title": "Debug",

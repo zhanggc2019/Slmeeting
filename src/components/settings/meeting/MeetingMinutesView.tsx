@@ -16,14 +16,14 @@ import ReactMarkdown from "react-markdown";
 import type { MeetingMinutes } from "@/bindings";
 
 type MinutesData = Record<string, unknown>;
-type SectionTone = "rose" | "blue" | "amber" | "neutral";
+type SectionTone = "primary" | "blue" | "amber" | "neutral";
 
 // Blend the brand accent with theme text so small labels remain legible in both themes.
 const brandLabelColor =
   "color-mix(in srgb, var(--color-text) 45%, var(--color-background-ui))";
 
 const sectionAccents: Record<SectionTone, string> = {
-  rose: "#be185d",
+  primary: "var(--color-logo-primary)",
   blue: "#0284c7",
   amber: "#d97706",
   neutral: "#808080",
@@ -39,15 +39,15 @@ function accentSurface(accent: string): CSSProperties {
 
 const collectionSections = [
   { key: "decisions", icon: CheckCircle2, tone: "blue" },
-  { key: "action_items", icon: ClipboardList, tone: "rose" },
+  { key: "action_items", icon: ClipboardList, tone: "primary" },
   { key: "key_topics", icon: MessageSquareText, tone: "neutral" },
   { key: "business_impact", icon: Lightbulb, tone: "blue" },
   { key: "risks", icon: AlertTriangle, tone: "amber" },
   { key: "blockers", icon: AlertTriangle, tone: "amber" },
   { key: "open_questions", icon: CircleHelp, tone: "neutral" },
   { key: "requests_for_decision", icon: CircleHelp, tone: "blue" },
-  { key: "next_steps", icon: ClipboardList, tone: "rose" },
-  { key: "follow_up", icon: ClipboardList, tone: "rose" },
+  { key: "next_steps", icon: ClipboardList, tone: "primary" },
+  { key: "follow_up", icon: ClipboardList, tone: "primary" },
 ] as const;
 
 /** Accept only JSON objects as structured meeting minutes. */
@@ -284,7 +284,9 @@ export function MeetingMinutesView({ minutes }: { minutes: MeetingMinutes }) {
                                 {owner && (
                                   <span
                                     className="rounded-md px-2 py-0.5"
-                                    style={accentSurface(sectionAccents.rose)}
+                                    style={accentSurface(
+                                      sectionAccents.primary,
+                                    )}
                                   >
                                     {t("settings.meeting.minutesView.owner")}:{" "}
                                     {owner}

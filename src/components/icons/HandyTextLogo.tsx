@@ -22,25 +22,7 @@ const HandyTextLogo = ({
         role="img"
         aria-label={meetingBrandName}
       >
-        <rect x="2" y="2" width="60" height="60" rx="18" fill="#5B1738" />
-        <path
-          d="M32 14L25 19L27 24C19 27 15 34 17 43C19 52 25 56 32 56C39 56 45 52 47 43C49 34 45 27 37 24L39 19L32 14Z"
-          fill="#F04D68"
-        />
-        <path
-          d="M27 20L22 16L23 23L29 25M37 20L42 16L41 23L35 25"
-          fill="#F5D796"
-        />
-        <path
-          d="M22 33C22 30.8 23.8 29 26 29H39C41.2 29 43 30.8 43 33V40C43 42.2 41.2 44 39 44H34L29 48V44H26C23.8 44 22 42.2 22 40V33Z"
-          fill="#FFF6E9"
-        />
-        <path
-          d="M28 38V35M32 40V33M36 38V35"
-          stroke="#7D2548"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-        />
+        <image href="/shiliu-app-icon.png" x="2" y="2" width="60" height="60" />
         <text
           x="72"
           y="42"

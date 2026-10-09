@@ -971,6 +971,14 @@ async saveMeetingWordDocument(path: string, contents: number[]) : Promise<Result
     else return { status: "error", error: e  as any };
 }
 },
+async saveMeetingHtmlDocument(path: string, contents: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("save_meeting_html_document", { path, contents }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async importMeetingAudio(path: string, title: string | null, templateId: string | null) : Promise<Result<MeetingSession, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("import_meeting_audio", { path, title, templateId }) };

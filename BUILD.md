@@ -123,7 +123,7 @@ The meeting assistant uses its own product name, application identifier, and ico
 ```powershell
 $meetingConfig = (Resolve-Path .\src-tauri\tauri.meeting.conf.json).Path
 $env:HANDY_APP_DISPLAY_NAME = '石榴会议助手'
-$env:HANDY_APP_VERSION = '0.10.3'
+$env:HANDY_APP_VERSION = '0.10.4'
 $env:VITE_APP_DISPLAY_NAME = '石榴会议助手'
 # Use the CPU backend when Vulkan SDK is unavailable.
 $env:TRANSCRIBE_CMAKE_ARGS = '-DTRANSCRIBE_VULKAN=OFF'

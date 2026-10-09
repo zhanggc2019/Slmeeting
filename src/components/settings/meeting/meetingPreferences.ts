@@ -13,6 +13,8 @@ export interface MeetingPreferences {
 }
 
 const STORE_PATH = "meeting-llm-preferences.json";
+let cachedPreferences: MeetingPreferences | null = null;
+let pendingSave: Promise<void> = Promise.resolve();
 
 const PROVIDER_DEFAULTS: Record<string, MeetingLlmProfile> = {
   deepseek: {
@@ -52,19 +54,29 @@ export function meetingProfile(
 
 /** Load locally saved meeting LLM preferences from the dedicated Tauri store. */
 export async function loadMeetingPreferences(): Promise<MeetingPreferences> {
+  if (cachedPreferences) return cachedPreferences;
+  await pendingSave;
   const store = await Store.load(STORE_PATH);
   const saved = await store.get<MeetingPreferences>("preferences");
   if (!saved || !PROVIDER_DEFAULTS[saved.providerId] || !saved.profiles) {
-    return defaultMeetingPreferences();
+    cachedPreferences = defaultMeetingPreferences();
+    return cachedPreferences;
   }
-  return saved;
+  cachedPreferences = saved;
+  return cachedPreferences;
 }
 
 /** Persist meeting LLM preferences for the next app launch. */
 export async function saveMeetingPreferences(
   preferences: MeetingPreferences,
 ): Promise<void> {
-  const store = await Store.load(STORE_PATH);
-  await store.set("preferences", preferences);
-  await store.save();
+  cachedPreferences = preferences;
+  pendingSave = pendingSave
+    .catch(() => undefined)
+    .then(async () => {
+      const store = await Store.load(STORE_PATH);
+      await store.set("preferences", preferences);
+      await store.save();
+    });
+  await pendingSave;
 }

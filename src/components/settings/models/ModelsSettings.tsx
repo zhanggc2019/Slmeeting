@@ -18,6 +18,7 @@ import {
   supportsLanguageCode,
 } from "@/lib/constants/languages.ts";
 import type { ModelInfo } from "@/bindings";
+import { MeetingModelSettings } from "../meeting/MeetingModelSettings";
 
 // check if model supports a language based on its supported_languages list
 const modelSupportsLanguage = (model: ModelInfo, langCode: string): boolean => {
@@ -30,7 +31,7 @@ const modelSupportsLanguage = (model: ModelInfo, langCode: string): boolean => {
 const isLegacyModel = (model: ModelInfo): boolean =>
   typeof model.source === "object" && "Url" in model.source;
 
-export const ModelsSettings: React.FC = () => {
+const TranscriptionModelsSettings: React.FC = () => {
   const { t } = useTranslation();
   const [switchingModelId, setSwitchingModelId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -448,6 +449,47 @@ export const ModelsSettings: React.FC = () => {
           <div className="text-center py-8 text-text/50">
             {t("settings.models.noModelsMatch")}
           </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+/** Show transcription and meeting generation settings as separate model tabs. */
+export const ModelsSettings: React.FC = () => {
+  const { t } = useTranslation();
+  const [activeTab, setActiveTab] = useState<"transcription" | "minutes">(
+    "transcription",
+  );
+
+  return (
+    <div className="max-w-4xl w-full mx-auto space-y-5">
+      <div
+        className="flex gap-2 border-b border-mid-gray/20 pb-2"
+        role="tablist"
+      >
+        {(["transcription", "minutes"] as const).map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === tab}
+            onClick={() => setActiveTab(tab)}
+            className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
+              activeTab === tab
+                ? "bg-logo-primary/20 text-text shadow-sm"
+                : "text-text/60 hover:bg-mid-gray/10 hover:text-text"
+            }`}
+          >
+            {t(`settings.models.tabs.${tab}`)}
+          </button>
+        ))}
+      </div>
+      <div role="tabpanel">
+        {activeTab === "transcription" ? (
+          <TranscriptionModelsSettings />
+        ) : (
+          <MeetingModelSettings />
         )}
       </div>
     </div>

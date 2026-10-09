@@ -13,6 +13,9 @@ installCompatShims();
 
 // Set platform before render so CSS can scope per-platform (e.g. scrollbar styles)
 document.documentElement.dataset.platform = platform();
+if (import.meta.env.VITE_APP_DISPLAY_NAME === "石榴会议助手") {
+  document.documentElement.dataset.brand = "shiliu";
+}
 
 // Apply the last-known theme synchronously before render to avoid a flash of
 // the wrong palette, then reconcile with the persisted setting once it loads.
