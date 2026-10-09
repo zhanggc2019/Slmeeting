@@ -49,6 +49,8 @@ export const MeetingSettings: React.FC = () => {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [exportingWord, setExportingWord] = useState(false);
   const generatingRef = useRef(false);
+  const selectedIdRef = useRef<string | null>(selectedId);
+  selectedIdRef.current = selectedId;
   const minutesRef = useRef<HTMLDivElement>(null);
   const { providerId, templateId } = preferences;
   const { apiKey, baseUrl, model } = meetingProfile(preferences, providerId);
@@ -65,6 +67,25 @@ export const MeetingSettings: React.FC = () => {
       }
     }
   }, [selectedId]);
+
+  /** Reload the selected meeting's transcript and latest minutes from storage. */
+  const loadMeetingDetails = useCallback(async (meetingId: string) => {
+    const [segmentResult, minutesResult] = await Promise.all([
+      commands.getMeetingSegments(meetingId),
+      commands.getMeetingMinutes(meetingId),
+    ]);
+    if (selectedIdRef.current !== meetingId) return;
+    if (segmentResult.status === "ok") setSegments(segmentResult.data);
+    if (minutesResult.status === "ok") setMinutes(minutesResult.data);
+  }, []);
+
+  /** Refresh both the meeting list and the selected transcript. */
+  const refreshMeetings = useCallback(async () => {
+    await loadSessions();
+    if (selectedIdRef.current) {
+      await loadMeetingDetails(selectedIdRef.current);
+    }
+  }, [loadMeetingDetails, loadSessions]);
 
   const loadTemplates = useCallback(async () => {
     const result = await commands.listMeetingTemplates();
@@ -126,25 +147,10 @@ export const MeetingSettings: React.FC = () => {
   }, [loadSessions, loadTemplates]);
 
   useEffect(() => {
-    let active = true;
     setSegments([]);
     setMinutes(null);
-    if (!selectedId) {
-      return;
-    }
-    void (async () => {
-      const [segmentResult, minutesResult] = await Promise.all([
-        commands.getMeetingSegments(selectedId),
-        commands.getMeetingMinutes(selectedId),
-      ]);
-      if (!active) return;
-      if (segmentResult.status === "ok") setSegments(segmentResult.data);
-      if (minutesResult.status === "ok") setMinutes(minutesResult.data);
-    })();
-    return () => {
-      active = false;
-    };
-  }, [selectedId]);
+    if (selectedId) void loadMeetingDetails(selectedId);
+  }, [selectedId, loadMeetingDetails]);
 
   useEffect(() => {
     const unlisten = events.meetingProgressEvent.listen((event) => {
@@ -159,7 +165,8 @@ export const MeetingSettings: React.FC = () => {
       }
       if (
         event.payload.phase === "completed" ||
-        event.payload.phase === "transcribed"
+        event.payload.phase === "transcribed" ||
+        event.payload.phase === "failed"
       ) {
         void loadSessions();
       }
@@ -168,6 +175,16 @@ export const MeetingSettings: React.FC = () => {
       unlisten.then((stop) => stop());
     };
   }, [loadSessions, selectedId, t]);
+
+  useEffect(() => {
+    if (
+      selectedId &&
+      progress?.meeting_id === selectedId &&
+      ["transcribed", "completed", "failed"].includes(progress.phase)
+    ) {
+      void loadMeetingDetails(selectedId);
+    }
+  }, [loadMeetingDetails, progress, selectedId]);
 
   useEffect(() => {
     const unlisten = events.streamTextEvent.listen((event) => {
@@ -252,20 +269,31 @@ export const MeetingSettings: React.FC = () => {
   /** Ask the selected LLM provider to generate minutes from saved segments. */
   const generateMinutes = async () => {
     if (generatingRef.current || !selectedId) return;
-    if (providerId !== "ollama" && !apiKey.trim()) {
-      toast.error(t("settings.meeting.apiKeyRequired"));
-      return;
-    }
+    const meetingId = selectedId;
     generatingRef.current = true;
     setGenerating(true);
     try {
+      const segmentResult = await commands.getMeetingSegments(meetingId);
+      if (segmentResult.status === "error")
+        throw new Error(segmentResult.error);
+      setSegments(segmentResult.data);
+      if (segmentResult.data.length === 0) {
+        toast.error(t("settings.meeting.noTranscript"), {
+          description: t("settings.meeting.noTranscriptHint"),
+        });
+        return;
+      }
+      if (providerId !== "ollama" && !apiKey.trim()) {
+        toast.error(t("settings.meeting.apiKeyRequired"));
+        return;
+      }
       try {
         await saveMeetingPreferences(preferences);
       } catch {
         toast.error(t("settings.meeting.preferencesFailed"));
       }
       const result = await commands.generateMeetingMinutes(
-        selectedId,
+        meetingId,
         templateId,
         providerId,
         baseUrl,
@@ -417,7 +445,7 @@ export const MeetingSettings: React.FC = () => {
             </span>
             <button
               type="button"
-              onClick={() => void loadSessions()}
+              onClick={() => void refreshMeetings()}
               title={t("settings.meeting.refresh")}
             >
               <RefreshCw className="w-4 h-4 text-text/60" />
@@ -443,7 +471,7 @@ export const MeetingSettings: React.FC = () => {
                     {session.title}
                   </span>
                   <span className="block text-xs text-text/50">
-                    {session.status}
+                    {t(`settings.meeting.statuses.${session.status}`)}
                   </span>
                 </button>
                 <button
@@ -589,12 +617,7 @@ export const MeetingSettings: React.FC = () => {
             />
             <Button
               onClick={generateMinutes}
-              disabled={
-                !selectedId ||
-                segments.length === 0 ||
-                generating ||
-                !preferencesLoaded
-              }
+              disabled={!selectedId || generating || !preferencesLoaded}
             >
               {generating && (
                 <RefreshCw className="w-4 h-4 animate-spin mr-2" />

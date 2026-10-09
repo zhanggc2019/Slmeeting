@@ -482,6 +482,16 @@
       "liveFailed": "Live meeting failed",
       "importAudio": "Import audio",
       "history": "Meeting history",
+      "statuses": {
+        "draft": "Draft",
+        "recording": "Recording",
+        "processing": "Transcribing",
+        "transcribed": "Transcribed",
+        "generating_minutes": "Generating minutes",
+        "completed": "Completed",
+        "failed": "Failed",
+        "cancelled": "Cancelled"
+      },
       "refresh": "Refresh meetings",
       "deleteTitle": "Delete meeting",
       "deleteConfirm": "Delete “{{title}}” and its transcript and minutes? This cannot be undone.",
@@ -490,6 +500,7 @@
       "empty": "No meetings yet.",
       "noSelection": "Select a meeting",
       "noTranscript": "No transcript segments yet.",
+      "noTranscriptHint": "Wait for transcription to finish, or import an audio file with clear speech.",
       "timestamp": "[{{time}}]",
       "progress": "{{phase}} · {{percent}}%",
       "phases": {

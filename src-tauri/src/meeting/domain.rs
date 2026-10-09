@@ -17,6 +17,7 @@ pub enum MeetingStatus {
     Draft,
     Recording,
     Processing,
+    Transcribed,
     GeneratingMinutes,
     Completed,
     Failed,

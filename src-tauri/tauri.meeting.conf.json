@@ -1,7 +1,7 @@
 {
   "productName": "石榴会议助手",
   "mainBinaryName": "shiliu-meeting-assistant",
-  "version": "0.10.2",
+  "version": "0.10.3",
   "identifier": "com.shiliu.meetingassistant",
   "bundle": {
     "createUpdaterArtifacts": false,

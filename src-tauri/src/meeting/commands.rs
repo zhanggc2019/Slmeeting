@@ -240,11 +240,29 @@ pub async fn stop_live_meeting(
                 speaker_id: None,
             })
             .map_err(|error| error.to_string())?;
+    } else {
+        manager
+            .update_status(
+                &meeting_id,
+                MeetingStatus::Failed,
+                None,
+                Some(Utc::now().timestamp_millis()),
+                Some(duration_ms),
+            )
+            .map_err(|error| error.to_string())?;
+        emit_progress(
+            &app,
+            &meeting_id,
+            "failed",
+            1.0,
+            Some("No speech was recognized in this meeting".to_string()),
+        );
+        return Err("No speech was recognized in this meeting".to_string());
     }
     manager
         .update_status(
             &meeting_id,
-            MeetingStatus::Processing,
+            MeetingStatus::Transcribed,
             None,
             Some(Utc::now().timestamp_millis()),
             Some(duration_ms),
@@ -387,10 +405,14 @@ async fn run_offline_job(
         );
     }
 
+    if sequence == 0 {
+        anyhow::bail!("No speech was recognized in the audio file");
+    }
+
     let ended_at = Utc::now().timestamp_millis();
     manager_for_worker.update_status(
         &meeting_id_for_worker,
-        MeetingStatus::Processing,
+        MeetingStatus::Transcribed,
         None,
         Some(ended_at),
         Some((decoded.len() as i64 * 1000) / 16_000),
@@ -422,6 +444,17 @@ pub async fn generate_meeting_minutes(
     api_key: String,
     model: Option<String>,
 ) -> Result<MeetingMinutes, String> {
+    let session = manager
+        .get_session(&meeting_id)
+        .map_err(|error| error.to_string())?
+        .ok_or_else(|| format!("meeting session '{}' was not found", meeting_id))?;
+    if matches!(
+        session.status,
+        MeetingStatus::Recording | MeetingStatus::Processing
+    ) && session.ended_at.is_none()
+    {
+        return Err("meeting transcription is still in progress".to_string());
+    }
     let template = builtin_templates()
         .into_iter()
         .find(|template| template.id == template_id)

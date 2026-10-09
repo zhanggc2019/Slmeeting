@@ -482,6 +482,16 @@
       "liveFailed": "实时会议失败",
       "importAudio": "导入音频",
       "history": "会议记录",
+      "statuses": {
+        "draft": "待处理",
+        "recording": "录音中",
+        "processing": "转写中",
+        "transcribed": "转写完成",
+        "generating_minutes": "正在生成纪要",
+        "completed": "纪要已完成",
+        "failed": "处理失败",
+        "cancelled": "已取消"
+      },
       "refresh": "刷新会议",
       "deleteTitle": "删除会议记录",
       "deleteConfirm": "确定删除“{{title}}”及其转写和纪要吗？此操作无法撤销。",
@@ -490,6 +500,7 @@
       "empty": "还没有会议记录。",
       "noSelection": "请选择一个会议",
       "noTranscript": "还没有转写片段。",
+      "noTranscriptHint": "请等待转写完成；若已完成，请重新导入含有清晰语音的音频。",
       "timestamp": "[{{time}}]",
       "progress": "{{phase}} · {{percent}}%",
       "phases": {

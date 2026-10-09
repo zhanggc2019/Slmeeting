@@ -59,6 +59,17 @@ static MIGRATIONS: &[M] = &[
             FOREIGN KEY(meeting_id) REFERENCES meeting_sessions(id) ON DELETE CASCADE
         );",
     ),
+    M::up(
+        "UPDATE meeting_sessions
+         SET status = CASE
+             WHEN EXISTS (
+                 SELECT 1 FROM meeting_segments
+                 WHERE meeting_segments.meeting_id = meeting_sessions.id
+             ) THEN 'transcribed'
+             ELSE 'failed'
+         END
+         WHERE status = 'processing' AND ended_at IS NOT NULL;",
+    ),
 ];
 
 /// Owns meeting persistence and the meeting audio directory.
@@ -485,6 +496,7 @@ fn status_to_string(status: &MeetingStatus) -> &'static str {
         MeetingStatus::Draft => "draft",
         MeetingStatus::Recording => "recording",
         MeetingStatus::Processing => "processing",
+        MeetingStatus::Transcribed => "transcribed",
         MeetingStatus::GeneratingMinutes => "generating_minutes",
         MeetingStatus::Completed => "completed",
         MeetingStatus::Failed => "failed",
@@ -497,6 +509,7 @@ fn status_from_string(status: &str) -> MeetingStatus {
     match status {
         "recording" => MeetingStatus::Recording,
         "processing" => MeetingStatus::Processing,
+        "transcribed" => MeetingStatus::Transcribed,
         "generating_minutes" => MeetingStatus::GeneratingMinutes,
         "completed" => MeetingStatus::Completed,
         "failed" => MeetingStatus::Failed,
@@ -508,6 +521,44 @@ fn status_from_string(status: &str) -> MeetingStatus {
 #[cfg(test)]
 mod deletion_tests {
     use super::*;
+
+    /// Recover transcripts completed by older releases and flag empty results.
+    #[test]
+    fn upgrades_finished_processing_sessions() {
+        let mut connection = Connection::open_in_memory().expect("in-memory database");
+        Migrations::new(MIGRATIONS[..3].to_vec())
+            .to_latest(&mut connection)
+            .expect("previous meeting schema");
+        connection
+            .execute_batch(
+                "INSERT INTO meeting_sessions (id, title, source, status, created_at, ended_at)
+                 VALUES ('with_text', 'One', 'audio_file', 'processing', 1, 2),
+                        ('without_text', 'Two', 'audio_file', 'processing', 3, 4),
+                        ('active', 'Three', 'audio_file', 'processing', 5, NULL);
+                 INSERT INTO meeting_segments (meeting_id, sequence, start_ms, end_ms, text)
+                 VALUES ('with_text', 0, 0, 1000, 'spoken words');",
+            )
+            .expect("legacy meeting rows");
+
+        Migrations::new(MIGRATIONS.to_vec())
+            .to_latest(&mut connection)
+            .expect("upgrade meeting statuses");
+
+        for (id, expected) in [
+            ("with_text", "transcribed"),
+            ("without_text", "failed"),
+            ("active", "processing"),
+        ] {
+            let actual: String = connection
+                .query_row(
+                    "SELECT status FROM meeting_sessions WHERE id = ?1",
+                    params![id],
+                    |row| row.get(0),
+                )
+                .expect("meeting status");
+            assert_eq!(actual, expected);
+        }
+    }
 
     /// Verify deletion removes dependent rows while preserving other meetings.
     #[test]
