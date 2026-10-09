@@ -116,6 +116,19 @@ bun run tauri build
 
 This compiles a release binary and generates platform-specific bundles (deb, rpm, AppImage on Linux; dmg on macOS; msi on Windows).
 
+### Preview the separate meeting assistant on Windows
+
+The meeting assistant uses its own product name, application identifier, and icons so it can coexist with Handy. From the repository root in PowerShell:
+
+```powershell
+$meetingConfig = (Resolve-Path .\src-tauri\tauri.meeting.conf.json).Path
+$env:HANDY_APP_DISPLAY_NAME = '石榴会议助手'
+$env:VITE_APP_DISPLAY_NAME = '石榴会议助手'
+# Use the CPU backend when Vulkan SDK is unavailable.
+$env:TRANSCRIBE_CMAKE_ARGS = '-DTRANSCRIBE_VULKAN=OFF'
+bun run tauri dev --release --target x86_64-pc-windows-msvc --config $meetingConfig
+```
+
 ## Linux Install (from source)
 
 The raw binary (`src-tauri/target/release/handy`) cannot run standalone — it needs Tauri resource files (tray icons, sounds, VAD model) to be co-located at the expected path.

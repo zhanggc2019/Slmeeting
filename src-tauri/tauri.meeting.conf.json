@@ -1,0 +1,18 @@
+{
+  "productName": "石榴会议助手",
+  "identifier": "com.pais.shiliu.meetingassistant",
+  "bundle": {
+    "createUpdaterArtifacts": false,
+    "icon": [
+      "icons-meeting/32x32.png",
+      "icons-meeting/128x128.png",
+      "icons-meeting/128x128@2x.png",
+      "icons-meeting/icon.ico"
+    ]
+  },
+  "plugins": {
+    "updater": {
+      "endpoints": ["https://updates.shiliu-meeting.invalid/latest.json"]
+    }
+  }
+}
